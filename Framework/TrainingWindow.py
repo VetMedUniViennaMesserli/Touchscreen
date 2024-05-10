@@ -1,4 +1,4 @@
-from PySide6.QtWidgets import QHBoxLayout, QWidget
+from PySide6.QtWidgets import QHBoxLayout, QWidget, QMainWindow
 from PySide6.QtGui import QColor
 from PySide6.QtCore import QTimer, Qt, QUrl, QCoreApplication
 from PySide6.QtMultimedia import QSoundEffect
@@ -11,7 +11,7 @@ from Framework.SessionConfig import SessionConfig
 import logging
 from datetime import datetime
 
-class TrainingWindow(QWidget):
+class TrainingWindow(QMainWindow):
     def __init__(self, sessionConfig: SessionConfig, parent=None):
         super().__init__(parent=parent)
         
@@ -29,14 +29,16 @@ class TrainingWindow(QWidget):
 
         self.sessionConfig = sessionConfig
         self.trialNr = 0
-
-        self.viewLayout= QHBoxLayout(self)
+        
+        self.viewLayout= QHBoxLayout()
         self.viewLayout.setSpacing(0)
         self.viewLayout.setContentsMargins(0,0,0,0)
 
         self.view = QWidget()
         self.view.setAutoFillBackground(True)
         self.viewLayout.addWidget(self.view)
+
+        self.setCentralWidget(self.view)
         
         if not sessionConfig.cursorVisible:
             self.view.setCursor(Qt.BlankCursor)
