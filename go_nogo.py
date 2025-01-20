@@ -53,33 +53,42 @@ class GoNoGoTraining(TrainingWindow):
         return super().imageClicked(trainingImage, event)
 
     def getImage(self):
-        image1 = os.path.join("Training_Stimuli", "Paintings", random.choice(os.listdir(os.path.join("Training_Stimuli", "Paintings"))))
-        image2 = os.path.join("Training_Stimuli", "Underwater", random.choice(os.listdir(os.path.join("Training_Stimuli", "Underwater"))))
+        stimuli_path = os.path.join(os.path.dirname(__file__), "Training_Stimuli")
+        image1 = os.path.join(stimuli_path, "Paintings", random.choice(os.listdir(os.path.join(stimuli_path, "Paintings"))))
+        image2 = os.path.join(stimuli_path, "Underwater", random.choice(os.listdir(os.path.join(stimuli_path, "Underwater"))))
 
         trainingImages = [TrainingImage(image1, ImageCategory.CORRECT), TrainingImage(image2, ImageCategory.WRONG)]
         random.shuffle(trainingImages)
 
         return trainingImages[0]
 
-if __name__ == "__main__":
-    app = QApplication([])
-
-    sessionConfig = SessionConfig(interTrialInterval=2000,
-                                  errorScreenDuration=1000, 
-                                  correctionTrialInterTrialInterval=1000, 
-                                  numberOfTrials=5, 
+def createTouchscreenWindow(sessionEndCallback=None):
+    sessionConfig = SessionConfig(interTrialInterval=500,
+                                  errorScreenDuration=500, 
+                                  correctionTrialInterTrialInterval=500, 
+                                  numberOfTrials=3, 
                                   correctionTrialsActive=True, 
                                   backgroundColor=QColor(255,255,255,255), 
                                   errorScreenColor=QColor(255,0,0,255), 
-                                  successSoundFilePath=os.path.join("SoundEffects", "600hz.wav"), 
-                                  failureSoundFilePath=os.path.join("SoundEffects", "200hz.wav"),
+                                  successSoundFilePath=os.path.join(os.path.dirname(__file__), "SoundEffects", "600hz.wav"), 
+                                  failureSoundFilePath=os.path.join(os.path.dirname(__file__), "SoundEffects", "200hz.wav"),
                                   cursorVisible=True,
                                   trainingName="Go-NoGo")
 
-    trainingWindow = GoNoGoTraining(sessionConfig)
-    
+    trainingWindow = GoNoGoTraining(sessionConfig, sessionEndCallback=sessionEndCallback)
+
     trainingWindow.startFirstTrial()
+
+    return trainingWindow
+
+def startApp(sessionEndCallback = None):
+    app = QApplication([])
+
+    trainingWindow = createTouchscreenWindow()
 
     trainingWindow.showFullScreen()
     
     sys.exit(app.exec())
+
+if __name__ == "__main__":
+    app = startApp()

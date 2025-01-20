@@ -92,7 +92,7 @@ class SequentialLearningTraining(TrainingWindow):
         self.logTrialStart()
 
     def getImages(self):
-        image = os.path.join("Training_Stimuli", "Geometric_Shapes", "Circle_Red.png")
+        image = os.path.join(os.path.dirname(__file__), "Training_Stimuli", "Geometric_Shapes", "Circle_Red.png")
 
         trainingImage = TrainingImage(image, ImageCategory.OTHER)
 
@@ -103,9 +103,7 @@ class SequentialLearningTraining(TrainingWindow):
 
         return trainingImages
 
-if __name__ == "__main__":
-    app = QApplication([])
-
+def createTouchscreenWindow(sessionEndCallback=None):
     sessionConfig = SessionConfig(interTrialInterval=2000,
                                   errorScreenDuration=1000, 
                                   correctionTrialInterTrialInterval=1000, 
@@ -113,15 +111,25 @@ if __name__ == "__main__":
                                   correctionTrialsActive=True, 
                                   backgroundColor=QColor(255,255,255,255), 
                                   errorScreenColor=QColor(255,0,0,255), 
-                                  successSoundFilePath=os.path.join("SoundEffects", "600hz.wav"), 
-                                  failureSoundFilePath=os.path.join("SoundEffects", "200hz.wav"),
+                                  successSoundFilePath=os.path.join(os.path.dirname(__file__), "SoundEffects", "600hz.wav"), 
+                                  failureSoundFilePath=os.path.join(os.path.dirname(__file__), "SoundEffects", "200hz.wav"),
                                   cursorVisible=True,
                                   trainingName="Sequential Learning")
 
-    trainingWindow = SequentialLearningTraining(sessionConfig)
-    
+    trainingWindow = SequentialLearningTraining(sessionConfig, sessionEndCallback=sessionEndCallback)
+
     trainingWindow.startFirstTrial()
+
+    return trainingWindow
+
+def startApp(sessionEndCallback = None):
+    app = QApplication([])
+
+    trainingWindow = createTouchscreenWindow()
 
     trainingWindow.showFullScreen()
     
     sys.exit(app.exec())
+
+if __name__ == "__main__":
+    app = startApp()

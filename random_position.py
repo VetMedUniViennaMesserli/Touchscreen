@@ -58,15 +58,14 @@ class RandomPositionTraining(TrainingWindow):
         self.logTrialStart()
 
     def getImage(self):
-        image = os.path.join("Training_Stimuli", "Geometric_Shapes", random.choice(os.listdir(os.path.join("Training_Stimuli", "Geometric_Shapes"))))
+        stimuli_path = os.path.join(os.path.dirname(__file__), "Training_Stimuli")
+        image = os.path.join(stimuli_path, "Geometric_Shapes", random.choice(os.listdir(os.path.join(stimuli_path, "Geometric_Shapes"))))
 
         trainingImage = TrainingImage(image, ImageCategory.CORRECT)
 
         return trainingImage
 
-if __name__ == "__main__":
-    app = QApplication([])
-
+def createTouchscreenWindow(sessionEndCallback=None):
     sessionConfig = SessionConfig(interTrialInterval=2000,
                                   errorScreenDuration=1000, 
                                   correctionTrialInterTrialInterval=1000, 
@@ -74,15 +73,25 @@ if __name__ == "__main__":
                                   correctionTrialsActive=True, 
                                   backgroundColor=QColor(255,255,255,255), 
                                   errorScreenColor=QColor(255,0,0,255), 
-                                  successSoundFilePath=os.path.join("SoundEffects", "600hz.wav"), 
-                                  failureSoundFilePath=os.path.join("SoundEffects", "200hz.wav"),
+                                  successSoundFilePath=os.path.join(os.path.dirname(__file__), "SoundEffects", "600hz.wav"), 
+                                  failureSoundFilePath=os.path.join(os.path.dirname(__file__), "SoundEffects", "200hz.wav"),
                                   cursorVisible=True,
                                   trainingName="Random Position")
 
-    trainingWindow = RandomPositionTraining(sessionConfig)
-    
+    trainingWindow = RandomPositionTraining(sessionConfig, sessionEndCallback=sessionEndCallback)
+
     trainingWindow.startFirstTrial()
+
+    return trainingWindow
+
+def startApp(sessionEndCallback = None):
+    app = QApplication([])
+
+    trainingWindow = createTouchscreenWindow()
 
     trainingWindow.showFullScreen()
     
     sys.exit(app.exec())
+
+if __name__ == "__main__":
+    app = startApp()

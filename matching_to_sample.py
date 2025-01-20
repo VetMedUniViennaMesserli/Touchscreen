@@ -75,24 +75,23 @@ class MatchingToSampleTraining(TrainingWindow):
         self.logTrialStart()
 
     def getImages(self):
-        images = random.sample(os.listdir(os.path.join("Training_Stimuli", "Geometric_Shapes")), 2)
+        stimuli_path = os.path.join(os.path.dirname(__file__), "Training_Stimuli", "Geometric_Shapes")
+        images = random.sample(os.listdir(stimuli_path), 2)
         correctImage = random.choice(images)
 
         trainingImages= []
         
         for image in images:
             if image == correctImage:
-                trainingImages.append(TrainingImage(os.path.join("Training_Stimuli", "Geometric_Shapes", image), ImageCategory.CORRECT))
+                trainingImages.append(TrainingImage(os.path.join(stimuli_path, image), ImageCategory.CORRECT))
             else:
-                trainingImages.append(TrainingImage(os.path.join("Training_Stimuli", "Geometric_Shapes", image), ImageCategory.WRONG))
+                trainingImages.append(TrainingImage(os.path.join(stimuli_path, image), ImageCategory.WRONG))
 
         random.shuffle(trainingImages)
 
-        return TrainingImage(os.path.join("Training_Stimuli", "Geometric_Shapes", correctImage), ImageCategory.OTHER), trainingImages
+        return TrainingImage(os.path.join(stimuli_path, correctImage), ImageCategory.OTHER), trainingImages
 
-if __name__ == "__main__":
-    app = QApplication([])
-
+def createTouchscreenWindow(sessionEndCallback=None):
     sessionConfig = SessionConfig(interTrialInterval=2000,
                                   errorScreenDuration=1000, 
                                   correctionTrialInterTrialInterval=1000, 
@@ -100,15 +99,25 @@ if __name__ == "__main__":
                                   correctionTrialsActive=True, 
                                   backgroundColor=QColor(100,100,100,255), 
                                   errorScreenColor=QColor(255,0,0,255), 
-                                  successSoundFilePath=os.path.join("SoundEffects", "600hz.wav"), 
-                                  failureSoundFilePath=os.path.join("SoundEffects", "200hz.wav"),
+                                  successSoundFilePath=os.path.join(os.path.dirname(__file__), "SoundEffects", "600hz.wav"), 
+                                  failureSoundFilePath=os.path.join(os.path.dirname(__file__), "SoundEffects", "200hz.wav"),
                                   cursorVisible=True,
                                   trainingName="Matching to Sample")
 
-    trainingWindow = MatchingToSampleTraining(sessionConfig)
-    
+    trainingWindow = MatchingToSampleTraining(sessionConfig, sessionEndCallback=sessionEndCallback)
+
     trainingWindow.startFirstTrial()
+
+    return trainingWindow
+
+def startApp(sessionEndCallback = None):
+    app = QApplication([])
+
+    trainingWindow = createTouchscreenWindow()
 
     trainingWindow.showFullScreen()
     
     sys.exit(app.exec())
+
+if __name__ == "__main__":
+    app = startApp()

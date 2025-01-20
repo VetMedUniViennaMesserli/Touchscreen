@@ -11,8 +11,8 @@ from Framework.SessionConfig import SessionConfig
 import logging
 from datetime import datetime
 
-class TrainingWindow(QMainWindow):
-    def __init__(self, sessionConfig: SessionConfig, parent=None):
+class TrainingWindow(QWidget):
+    def __init__(self, sessionConfig: SessionConfig, parent=None, sessionEndCallback=None):
         super().__init__(parent=parent)
         
         self.soundEffect = QSoundEffect(QCoreApplication.instance())
@@ -29,6 +29,8 @@ class TrainingWindow(QMainWindow):
 
         self.sessionConfig = sessionConfig
         self.trialNr = 0
+
+        self.sessionEndCallback = sessionEndCallback
         
         self.viewLayout= QHBoxLayout()
         self.viewLayout.setSpacing(0)
@@ -38,7 +40,7 @@ class TrainingWindow(QMainWindow):
         self.view.setAutoFillBackground(True)
         self.viewLayout.addWidget(self.view)
 
-        self.setCentralWidget(self.view)
+        self.setLayout(self.viewLayout)
         
         if not sessionConfig.cursorVisible:
             self.view.setCursor(Qt.BlankCursor)
@@ -77,6 +79,9 @@ class TrainingWindow(QMainWindow):
         palette.setColor(self.view.backgroundRole(), QColor(0,0,0,255))
         self.view.setPalette(palette)
         
+        if self.sessionEndCallback is not None:
+            self.sessionEndCallback()
+
         self.logSessionEnd()
 
     def trialCompletedSuccessful(self):
@@ -99,11 +104,7 @@ class TrainingWindow(QMainWindow):
         self.container.hide()
         self.setBackgroundColor(self.sessionConfig.errorScreenColor)
 
-        timer = QTimer(self)
-        timer.setTimerType(Qt.PreciseTimer)
-        timer.setSingleShot(True)
-        timer.timeout.connect(self, self.hideErrorScreen)
-        timer.start(self.sessionConfig.errorScreenDuration)
+        self.startFunctionTimer(self.sessionConfig.errorScreenDuration, self.hideErrorScreen)
     
     def setBackgroundColor(self, color: QColor):
         palette = self.view.palette()
@@ -131,7 +132,7 @@ class TrainingWindow(QMainWindow):
         timer = QTimer(self)
         timer.setTimerType(Qt.PreciseTimer)
         timer.setSingleShot(True)
-        timer.timeout.connect(self, function)
+        timer.timeout.connect(function)
         timer.start(interval)
 
         return timer
@@ -167,4 +168,27 @@ class TrainingWindow(QMainWindow):
 
     def keyPressEvent(self, event):
         if event.key() == Qt.Key_Escape or event.key() == Qt.Key_Q:
-            sys.exit()
+            self.closeApp()
+        super().keyPressEvent(event)
+
+    def closeApp(self):
+        print("Closing Application")
+        app = QCoreApplication.instance()
+        app.closeAllWindows()
+        app.quit()
+
+class MainWindow(QMainWindow):
+
+    def __init__(self, parent=None):
+        super().__init__(parent=parent)
+
+    def keyPressEvent(self, event):
+        if event.key() == Qt.Key_Escape or event.key() == Qt.Key_Q:
+            self.closeApp()
+        super().keyPressEvent(event)
+
+    def closeApp(self):
+        print("Closing Application")
+        app = QCoreApplication.instance()
+        app.closeAllWindows()
+        app.quit()
