@@ -11,87 +11,70 @@ import random
 import os
 
 class RandomPositionTraining(TrainingWindow):
-    def startFirstTrial(self):        
+    def startFirstTrial(self):
         self.layout = QGridLayout(self.container)
         self.layout.setSpacing(0)
-        self.layout.setContentsMargins(0,0,0,0)
-
-        trainingImage = self.getImage()
-        column = random.randrange(5)
-        row = random.randrange(4)
+        self.layout.setContentsMargins(0, 0, 0, 0)
 
         self.cells = []
-
-        for i in range(5):
-            for j in range(4):
+        for col in range(5):
+            for row in range(4):
                 cell = QWidget()
-                cellLayout =  QHBoxLayout(cell)
+                QHBoxLayout(cell)
+                self.layout.addWidget(cell, row, col, alignment=Qt.AlignCenter)
+                self.cells.append(cell.layout())
 
-                if i == column and j == row:
-                    cellLayout.addWidget(ImageButton(trainingImage, self.stimulusSelected, imageSize=(250,250)), alignment=Qt.AlignCenter)
-                
-                self.layout.addWidget(cell, j, i, alignment=Qt.AlignCenter)
-                self.cells.append(cellLayout)
-        
+        trainingImage = self.getImage()
+        self._currentCellIndex = random.randrange(len(self.cells))
+        self.imageButton = ImageButton(trainingImage, self.stimulusSelected, imageSize=(250, 250))
+        self.cells[self._currentCellIndex].addWidget(self.imageButton, alignment=Qt.AlignCenter)
+
         self.logTrialStart()
 
     def startNextTrial(self):
         trainingImage = self.getImage()
-        
-        cellIndex = random.randrange(len(self.cells))
+        newCellIndex = random.randrange(len(self.cells))
 
-        for i in range(len(self.cells)):
-            item = self.cells[i].takeAt(0)
-            if item is not None:
-                item.widget().changeImage(None)
-            if i == cellIndex:
-                self.cells[i].addWidget(ImageButton(trainingImage, self.stimulusSelected, imageSize=(250,250)), alignment=Qt.AlignCenter)
+        self.cells[self._currentCellIndex].takeAt(0)
+        self.imageButton.changeImage(trainingImage)
+        self.cells[newCellIndex].addWidget(self.imageButton, alignment=Qt.AlignCenter)
+        self._currentCellIndex = newCellIndex
 
         self.container.show()
         self.container.update()
-        
         self.logTrialStart()
-        
+
     def startCorrectionTrial(self):
         self.container.show()
-        
         self.logTrialStart()
 
     def getImage(self):
         stimuli_path = os.path.join(os.path.dirname(__file__), "..", "Training_Stimuli")
         image = os.path.join(stimuli_path, "Geometric_Shapes", random.choice(os.listdir(os.path.join(stimuli_path, "Geometric_Shapes"))))
-
-        trainingImage = TrainingStimulus(image, StimulusCategory.CORRECT)
-
-        return trainingImage
+        return TrainingStimulus(image, StimulusCategory.CORRECT)
 
 def createTouchscreenWindow(sessionEndCallback=None):
     sessionConfig = SessionConfig(interTrialInterval=2000,
-                                  errorScreenDuration=1000, 
-                                  correctionTrialInterTrialInterval=1000, 
-                                  numberOfTrials=5, 
-                                  correctionTrialsActive=True, 
-                                  backgroundColor=QColor(255,255,255,255), 
-                                  errorScreenColor=QColor(255,0,0,255), 
-                                  successSoundFilePath=os.path.join(os.path.dirname(__file__), "..", "SoundEffects", "600hz.wav"), 
+                                  errorScreenDuration=1000,
+                                  correctionTrialInterTrialInterval=1000,
+                                  numberOfTrials=5,
+                                  correctionTrialsActive=True,
+                                  backgroundColor=QColor(255,255,255,255),
+                                  errorScreenColor=QColor(255,0,0,255),
+                                  successSoundFilePath=os.path.join(os.path.dirname(__file__), "..", "SoundEffects", "600hz.wav"),
                                   failureSoundFilePath=os.path.join(os.path.dirname(__file__), "..", "SoundEffects", "200hz.wav"),
                                   cursorVisible=True,
                                   trainingName="Random Position")
 
     trainingWindow = RandomPositionTraining(sessionConfig, sessionEndCallback=sessionEndCallback)
-
     trainingWindow.startFirstTrial()
-
     return trainingWindow
 
 def startApp():
     app = QApplication([])
-
     trainingWindow = createTouchscreenWindow()
-
     trainingWindow.showFullScreen()
-    
     sys.exit(app.exec())
 
 if __name__ == "__main__":
-    app = startApp()
+    startApp()

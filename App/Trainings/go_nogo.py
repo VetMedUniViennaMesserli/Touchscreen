@@ -46,7 +46,7 @@ class GoNoGoTraining(TrainingWindow):
         if self.trainingImage.stimulusCategory == StimulusCategory.WRONG:
             self.trialCompletedSuccessful()
         elif self.trainingImage.stimulusCategory == StimulusCategory.CORRECT:
-            self.trialCompletedUnscucessful()
+            self.trialCompletedUnsuccessful()
 
     def stimulusSelected(self, trainingImage: TrainingStimulus):
         self.timeoutTimer.stop()

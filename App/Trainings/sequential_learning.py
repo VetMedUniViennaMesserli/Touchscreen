@@ -11,125 +11,76 @@ import copy
 import os
 
 class SequentialLearningTraining(TrainingWindow):
-    def startFirstTrial(self):        
+    # Positions in the grid: (row, col) for buttons 0-7, forming a U-shape
+    _POSITIONS = [(1,0),(1,1),(1,2),(1,3),(0,3),(0,2),(0,1),(0,0)]
+
+    def startFirstTrial(self):
         self.layout = QGridLayout(self.container)
         self.layout.setSpacing(0)
-        self.layout.setContentsMargins(450,300,450,300)
+        self.layout.setContentsMargins(450, 300, 450, 300)
 
         self.trainingImages = self.getImages()
         self.buttons = []
-        
-        self.buttons.append(ImageButton(self.trainingImages[0], self.stimulusSelected, (150, 150)))
-        self.buttons.append(ImageButton(self.trainingImages[1], self.stimulusSelected, (150, 150)))
-        self.buttons.append(ImageButton(self.trainingImages[2], self.stimulusSelected, (150, 150)))
-        self.buttons.append(ImageButton(self.trainingImages[3], self.stimulusSelected, (150, 150)))
-        self.buttons.append(ImageButton(self.trainingImages[4], self.stimulusSelected, (150, 150)))
-        self.buttons.append(ImageButton(self.trainingImages[5], self.stimulusSelected, (150, 150)))
-        self.buttons.append(ImageButton(self.trainingImages[6], self.stimulusSelected, (150, 150)))
-        self.buttons.append(ImageButton(self.trainingImages[7], self.stimulusSelected, (150, 150)))
-        
-        self.layout.addWidget(self.buttons[0], 1, 0, alignment=Qt.AlignCenter)
-        self.layout.addWidget(self.buttons[1], 1, 1, alignment=Qt.AlignCenter)
-        self.layout.addWidget(self.buttons[2], 1, 2, alignment=Qt.AlignCenter)
-        self.layout.addWidget(self.buttons[3], 1, 3, alignment=Qt.AlignCenter)
-        self.layout.addWidget(self.buttons[4], 0, 3, alignment=Qt.AlignCenter)
-        self.layout.addWidget(self.buttons[5], 0, 2, alignment=Qt.AlignCenter)
-        self.layout.addWidget(self.buttons[6], 0, 1, alignment=Qt.AlignCenter)
-        self.layout.addWidget(self.buttons[7], 0, 0, alignment=Qt.AlignCenter)
+        for i, (row, col) in enumerate(self._POSITIONS):
+            btn = ImageButton(self.trainingImages[i], self.stimulusSelected, (150, 150))
+            self.buttons.append(btn)
+            self.layout.addWidget(btn, row, col, alignment=Qt.AlignCenter)
 
         self.sequenceIndex = 0
-        
         self.logTrialStart()
 
-    def stimulusSelected(self, trainingImage: TrainingStimulus, event):
-        result = super().stimulusSelected(trainingImage, event)
-    
+    def stimulusSelected(self, trainingImage: TrainingStimulus):
+        self.logStimulusSelected(trainingImage)
         if trainingImage == self.trainingImages[self.sequenceIndex]:
-            if self.sequenceIndex == 7:
+            if self.sequenceIndex == len(self.buttons) - 1:
                 self.trialCompletedSuccessful()
             else:
                 self.buttons[self.sequenceIndex].changeImage(None)
                 self.sequenceIndex += 1
-        elif trainingImage is not None:
-            self.trialCompletedUnscucessful()
+        else:
+            self.trialCompletedUnsuccessful()
 
-        return result
+    def _resetTrial(self):
+        self.trainingImages = self.getImages()
+        for i, btn in enumerate(self.buttons):
+            btn.changeImage(self.trainingImages[i])
+        self.sequenceIndex = 0
+        self.container.show()
+        self.logTrialStart()
 
     def startNextTrial(self):
-        self.trainingImages = self.getImages()
-        
-        self.buttons[0].changeImage(self.trainingImages[0])
-        self.buttons[1].changeImage(self.trainingImages[1])
-        self.buttons[2].changeImage(self.trainingImages[2])
-        self.buttons[3].changeImage(self.trainingImages[3])
-        self.buttons[4].changeImage(self.trainingImages[4])
-        self.buttons[5].changeImage(self.trainingImages[5])
-        self.buttons[6].changeImage(self.trainingImages[6])
-        self.buttons[7].changeImage(self.trainingImages[7])
-        
-        self.sequenceIndex = 0
+        self._resetTrial()
 
-        self.container.show()
-
-        self.logTrialStart()
-        
     def startCorrectionTrial(self):
-        self.trainingImages = self.getImages()
-
-        self.buttons[0].changeImage(self.trainingImages[0])
-        self.buttons[1].changeImage(self.trainingImages[1])
-        self.buttons[2].changeImage(self.trainingImages[2])
-        self.buttons[3].changeImage(self.trainingImages[3])
-        self.buttons[4].changeImage(self.trainingImages[4])
-        self.buttons[5].changeImage(self.trainingImages[5])
-        self.buttons[6].changeImage(self.trainingImages[6])
-        self.buttons[7].changeImage(self.trainingImages[7])
-        
-        self.sequenceIndex = 0
-
-        self.container.show()
-        
-        self.logTrialStart()
+        self._resetTrial()
 
     def getImages(self):
         image = os.path.join(os.path.dirname(__file__), "..", "Training_Stimuli", "Geometric_Shapes", "Circle_Red.png")
-
         trainingImage = TrainingStimulus(image, StimulusCategory.OTHER)
-
-        trainingImages = []
-
-        for i in range(8):
-            trainingImages.append(copy.copy(trainingImage))
-
-        return trainingImages
+        return [copy.copy(trainingImage) for _ in range(len(self._POSITIONS))]
 
 def createTouchscreenWindow(sessionEndCallback=None):
     sessionConfig = SessionConfig(interTrialInterval=2000,
-                                  errorScreenDuration=1000, 
-                                  correctionTrialInterTrialInterval=1000, 
-                                  numberOfTrials=5, 
-                                  correctionTrialsActive=True, 
-                                  backgroundColor=QColor(255,255,255,255), 
-                                  errorScreenColor=QColor(255,0,0,255), 
-                                  successSoundFilePath=os.path.join(os.path.dirname(__file__), "..", "SoundEffects", "600hz.wav"), 
+                                  errorScreenDuration=1000,
+                                  correctionTrialInterTrialInterval=1000,
+                                  numberOfTrials=5,
+                                  correctionTrialsActive=True,
+                                  backgroundColor=QColor(255,255,255,255),
+                                  errorScreenColor=QColor(255,0,0,255),
+                                  successSoundFilePath=os.path.join(os.path.dirname(__file__), "..", "SoundEffects", "600hz.wav"),
                                   failureSoundFilePath=os.path.join(os.path.dirname(__file__), "..", "SoundEffects", "200hz.wav"),
                                   cursorVisible=True,
                                   trainingName="Sequential Learning")
 
     trainingWindow = SequentialLearningTraining(sessionConfig, sessionEndCallback=sessionEndCallback)
-
     trainingWindow.startFirstTrial()
-
     return trainingWindow
 
 def startApp():
     app = QApplication([])
-
     trainingWindow = createTouchscreenWindow()
-
     trainingWindow.showFullScreen()
-    
     sys.exit(app.exec())
 
 if __name__ == "__main__":
-    app = startApp()
+    startApp()

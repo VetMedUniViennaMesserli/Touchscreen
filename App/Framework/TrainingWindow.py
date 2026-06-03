@@ -3,52 +3,58 @@ from PySide6.QtGui import QColor
 from PySide6.QtCore import QTimer, Qt, QUrl, QCoreApplication
 from PySide6.QtMultimedia import QSoundEffect
 import os
+import logging
+from datetime import datetime
 from Framework.TrainingStimulus import TrainingStimulus
 from Framework.StimulusCategory import StimulusCategory
 from Framework.SessionConfig import SessionConfig
-import logging
-from datetime import datetime
 
 class TrainingWindow(QWidget):
     def __init__(self, sessionConfig: SessionConfig, parent=None, sessionEndCallback=None):
         super().__init__(parent=parent)
-        
-        self.soundEffect = QSoundEffect(self)
 
         logDir = os.path.join("SessionLogs", sessionConfig.trainingName.replace(' ', '_'))
-        if not os.path.exists(logDir):
-            os.makedirs(logDir)
-        
-        logFilePath = os.path.join("SessionLogs", sessionConfig.trainingName.replace(' ', '_'), str(datetime.now()).replace(' ', '_').replace(':', '-') + ".csv")
-        logging.basicConfig(filename=logFilePath,
-                    filemode='a',
-                    format='%(asctime)s, %(message)s',
-                    level=logging.INFO)
+        os.makedirs(logDir, exist_ok=True)
+        logFilePath = os.path.join(logDir, str(datetime.now()).replace(' ', '_').replace(':', '-') + ".csv")
+
+        self.logger = logging.getLogger(logFilePath)
+        self.logger.setLevel(logging.INFO)
+        handler = logging.FileHandler(logFilePath)
+        handler.setFormatter(logging.Formatter('%(asctime)s, %(message)s'))
+        self.logger.addHandler(handler)
 
         self.sessionConfig = sessionConfig
         self.trialNr = 0
-
         self.sessionEndCallback = sessionEndCallback
-        
-        self.viewLayout= QHBoxLayout()
+
+        self.successSound = QSoundEffect(self)
+        if sessionConfig.successSoundFilePath:
+            self.successSound.setSource(QUrl.fromLocalFile(sessionConfig.successSoundFilePath))
+            self.successSound.setVolume(1)
+
+        self.failureSound = QSoundEffect(self)
+        if sessionConfig.failureSoundFilePath:
+            self.failureSound.setSource(QUrl.fromLocalFile(sessionConfig.failureSoundFilePath))
+            self.failureSound.setVolume(1)
+
+        self.viewLayout = QHBoxLayout()
         self.viewLayout.setSpacing(0)
-        self.viewLayout.setContentsMargins(0,0,0,0)
+        self.viewLayout.setContentsMargins(0, 0, 0, 0)
 
         self.view = QWidget()
         self.view.setAutoFillBackground(True)
         self.viewLayout.addWidget(self.view)
-
         self.setLayout(self.viewLayout)
-        
+
         if not sessionConfig.cursorVisible:
             self.view.setCursor(Qt.BlankCursor)
 
         self.setBackgroundColor(self.sessionConfig.backgroundColor)
-        
+
         containerLayout = QHBoxLayout(self.view)
         containerLayout.setSpacing(0)
-        containerLayout.setContentsMargins(0,0,0,0)
-        
+        containerLayout.setContentsMargins(0, 0, 0, 0)
+
         self.container = QWidget()
         containerLayout.addWidget(self.container)
 
@@ -58,8 +64,7 @@ class TrainingWindow(QWidget):
         if trainingStimulus.stimulusCategory == StimulusCategory.CORRECT:
             self.trialCompletedSuccessful()
         elif trainingStimulus.stimulusCategory == StimulusCategory.WRONG:
-            self.trialCompletedUnscucessful()
-
+            self.trialCompletedUnsuccessful()
         self.logStimulusSelected(trainingStimulus)
 
     def startFirstTrial(self):
@@ -74,36 +79,34 @@ class TrainingWindow(QWidget):
     def endSession(self):
         self.container.hide()
         palette = self.view.palette()
-        palette.setColor(self.view.backgroundRole(), QColor(0,0,0,255))
+        palette.setColor(self.view.backgroundRole(), QColor(0, 0, 0, 255))
         self.view.setPalette(palette)
-        
+
         if self.sessionEndCallback is not None:
             self.sessionEndCallback()
 
         self.logSessionEnd()
 
     def trialCompletedSuccessful(self):
-        self.playSuccessSound()
+        self.successSound.play()
         self.logTrialEnd(True)
 
         self.trialNr += 1
         if self.trialNr < self.sessionConfig.numberOfTrials:
             self.startInterTrialInterval()
         else:
-            self.endSession()        
+            self.endSession()
 
-    def trialCompletedUnscucessful(self):
-        self.playFailureSound()
+    def trialCompletedUnsuccessful(self):
+        self.failureSound.play()
         self.logTrialEnd(False)
-
         self.showErrorScreen()
 
     def showErrorScreen(self):
         self.container.hide()
         self.setBackgroundColor(self.sessionConfig.errorScreenColor)
-
         self.startFunctionTimer(self.sessionConfig.errorScreenDuration, self.hideErrorScreen)
-    
+
     def setBackgroundColor(self, color: QColor):
         palette = self.view.palette()
         palette.setColor(self.view.backgroundRole(), color)
@@ -123,7 +126,6 @@ class TrainingWindow(QWidget):
 
     def startInterTrialInterval(self):
         self.container.hide()
-
         self.startFunctionTimer(self.sessionConfig.interTrialInterval, self.startNextTrial)
 
     def startFunctionTimer(self, interval: int, function):
@@ -132,37 +134,22 @@ class TrainingWindow(QWidget):
         timer.setSingleShot(True)
         timer.timeout.connect(function)
         timer.start(interval)
-
         return timer
 
-    def playSuccessSound(self):
-        self.playSound(self.sessionConfig.successSoundFilePath)
-
-    def playFailureSound(self):
-        self.playSound(self.sessionConfig.failureSoundFilePath)
-
-    def playSound(self, filePath):
-        if filePath is None:
-            return
-
-        self.soundEffect.setSource(QUrl.fromLocalFile(filePath))
-        self.soundEffect.setVolume(1)
-        self.soundEffect.play()
-
     def logSessionStart(self):
-        logging.info("Session Start")
-        
+        self.logger.info("Session Start")
+
     def logSessionEnd(self):
-        logging.info("Session End")
-    
+        self.logger.info("Session End")
+
     def logTrialStart(self):
-        logging.info("Trial Start")
-        
+        self.logger.info("Trial Start")
+
     def logTrialEnd(self, successful):
-        logging.info(f"Trial End, trial success: {successful}")
-    
+        self.logger.info(f"Trial End, trial success: {successful}")
+
     def logStimulusSelected(self, trainingStimulus: TrainingStimulus):
-        logging.info(f"Stimulus selected, file path: {trainingStimulus.filePath}, stimulus category: {trainingStimulus.stimulusCategory}")
+        self.logger.info(f"Stimulus selected, file path: {trainingStimulus.filePath}, stimulus category: {trainingStimulus.stimulusCategory}")
 
     def keyPressEvent(self, event):
         if event.key() == Qt.Key_Escape or event.key() == Qt.Key_Q:
