@@ -6,7 +6,7 @@ source "$SCRIPT_DIR/venv/bin/activate"
 
 cd "$SCRIPT_DIR/App"
 
-for script in two_images matching_to_sample go_nogo random_position sequential_learning two_images_keyboard_input; do
+for script in two_images matching_to_sample go_nogo random_position sequential_learning two_images_keyboard_input rule_learning; do
     pyinstaller \
         --add-data "$SCRIPT_DIR/App/Training_Stimuli:Training_Stimuli" \
         --add-data "$SCRIPT_DIR/App/SoundEffects:SoundEffects" \
