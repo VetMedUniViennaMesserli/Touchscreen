@@ -39,6 +39,13 @@ class TrainingWindow(QWidget):
             self.failureSound.setSource(QUrl.fromLocalFile(sessionConfig.failureSoundFilePath))
             self.failureSound.setVolume(1)
 
+        # Prime the audio backend once both sounds are fully loaded.
+        # setSource() is async; playing before Ready means the driver never warms up.
+        self._audioPrimed = False
+        self.successSound.statusChanged.connect(self._primeAudio)
+        self.failureSound.statusChanged.connect(self._primeAudio)
+        QTimer.singleShot(0, self._primeAudio)   # also try immediately in case already cached
+
         self.viewLayout = QHBoxLayout()
         self.viewLayout.setSpacing(0)
         self.viewLayout.setContentsMargins(0, 0, 0, 0)
@@ -137,6 +144,25 @@ class TrainingWindow(QWidget):
         timer.timeout.connect(function)
         timer.start(interval)
         return timer
+
+    def _primeAudio(self):
+        if self._audioPrimed:
+            return
+        from PySide6.QtMultimedia import QSoundEffect
+        if (self.successSound.status() != QSoundEffect.Status.Ready or
+                self.failureSound.status() != QSoundEffect.Status.Ready):
+            return   # not loaded yet — statusChanged will call us again
+        self._audioPrimed = True
+        for snd in (self.successSound, self.failureSound):
+            if not snd.source().isEmpty():
+                snd.setVolume(0.0)
+                snd.play()
+        QTimer.singleShot(200, self._restoreAudioVolume)
+
+    def _restoreAudioVolume(self):
+        for snd in (self.successSound, self.failureSound):
+            snd.stop()
+            snd.setVolume(1.0)
 
     def logSessionStart(self):
         self.logger.info("Session Start")

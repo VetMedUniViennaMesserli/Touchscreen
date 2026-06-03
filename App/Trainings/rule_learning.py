@@ -20,7 +20,7 @@ from Framework.paths import get_app_root
 
 from PySide6.QtWidgets import (QApplication, QHBoxLayout, QVBoxLayout,
                                 QWidget, QLabel, QPushButton)
-from PySide6.QtCore import Qt, QDateTime
+from PySide6.QtCore import Qt, QDateTime, QTimer
 from PySide6.QtGui import QColor, QFont, QShortcut, QKeySequence
 
 # ---------------------------------------------------------------------------
@@ -185,7 +185,10 @@ class RuleLearningTraining(TrainingWindow):
         scD = QShortcut(QKeySequence(Qt.Key_D), self)
         scD.activated.connect(lambda: self._keySelect('right'))
 
-        self._beginPhase()
+        # Hide until ready — gives the audio backend time to warm up before
+        # the first ER trial appears (animals respond very fast to the obvious stimulus).
+        self.container.hide()
+        QTimer.singleShot(500, self._beginPhase)
 
     # --- phase / session management ---
 
