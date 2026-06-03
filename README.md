@@ -28,30 +28,72 @@ source venv/bin/activate
 PYTHONPATH=App python App/Trainings/two_images.py
 ```
 
-Edit `touchscreen.sh` to select which training to run. Available trainings:
-
-| File | Task |
-|---|---|
-| `two_images.py` | Two-alternative forced choice (touchscreen) |
-| `two_images_keyboard_input.py` | Two-alternative forced choice (keyboard: A / D) |
-| `go_nogo.py` | Go / No-Go |
-| `matching_to_sample.py` | Matching to sample |
-| `random_position.py` | Random position |
-| `sequential_learning.py` | Sequential learning |
-| `rule_learning.py` | Second-order rule learning (touchscreen or keyboard: A / D) |
+Edit `touchscreen.sh` to select which training to run.
 
 Press `Escape` or `Q` to quit.
 
-### Rule learning
+## Trainings
 
-The rule learning task presents two geometric shapes side by side. The background colour signals which rule is active:
+### Two images (`two_images.py`)
 
-| Background | Rule | Rewarded stimulus |
+Two images are shown side by side — one from the **Paintings** category (correct) and one from the **Underwater** category (wrong). Their left/right position is randomised each trial. The subject must touch the painting. Feedback: success sound + inter-trial interval on correct; error sound + red screen on wrong.
+
+Input: touchscreen.
+
+---
+
+### Two images — keyboard (`two_images_keyboard_input.py`)
+
+Identical to Two images but responds to key presses instead of touch. Press **A** to select the left image, **D** to select the right image. Compatible with the Raspberry Pi Pico W hardware button box (`Devices/Keyboard/`).
+
+Input: keyboard (A / D).
+
+---
+
+### Go / No-Go (`go_nogo.py`)
+
+A single image is shown for up to **2 seconds**. The subject should touch it if it is a Painting (Go trial) and withhold if it is an Underwater image (No-Go trial). Not touching within the timeout counts as a correct No-Go response; touching a No-Go stimulus or not touching a Go stimulus counts as an error.
+
+Input: touchscreen.
+
+---
+
+### Matching to sample (`matching_to_sample.py`)
+
+A sample geometric shape is shown alone for **1 second**, then replaced by two choice shapes. The subject must touch the shape that matches the sample. Stimuli are drawn from `Training_Stimuli/Geometric_Shapes/`.
+
+Input: touchscreen.
+
+---
+
+### Random position (`random_position.py`)
+
+A single geometric shape is placed at a random position in a **5 × 4 grid**. The subject must touch it regardless of where it appears. Trains position-independent stimulus recognition.
+
+Input: touchscreen.
+
+---
+
+### Sequential learning (`sequential_learning.py`)
+
+Eight identical red circles are arranged in a U-shape across a **2 × 4 grid**. The subject must touch them in a fixed order (bottom row left-to-right, then top row right-to-left). Each correctly touched circle disappears; touching the wrong one triggers an error.
+
+Input: touchscreen.
+
+---
+
+### Rule learning (`rule_learning.py`)
+
+Two geometric shapes are shown side by side. The **background colour** signals which rule is currently active:
+
+| Background | Rule | Correct stimulus |
 |---|---|---|
-| Light grey | Rule A | Target **colour** |
-| Purple | Rule B | Target **shape** |
+| Light grey | Rule A | Stimulus with the **target colour** |
+| Purple | Rule B | Stimulus with the **target shape** |
 
-The target shape, target colour, and which rule is presented first are randomised at the start of each run. Sessions progress through four phases — Rule A, Rule B, Alternating (blocked), Mixed (interleaved) — advancing to the next phase only once the session criterion is reached (≥ N/2 − 1 correct per trial type). Each session begins with 4 error-reduced trials (one stimulus shown). Wrong choices trigger a correction trial (up to 5 attempts).
+The target shape, target colour, and starting rule are randomised at the start of each run. The experiment progresses through four phases — Rule A, Rule B, Alternating (blocked), Mixed (interleaved) — and only advances to the next phase when the session criterion is reached (≥ N/2 − 1 correct per trial type). Each session starts with 4 error-reduced trials (one stimulus hidden). Wrong choices trigger a correction trial (up to 5 attempts per trial).
+
+Input: touchscreen or keyboard (A = left, D = right).
 
 ## Building executables (optional)
 
