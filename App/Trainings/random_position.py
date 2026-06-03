@@ -3,6 +3,7 @@ from Framework.TrainingWindow import TrainingWindow
 from Framework.TrainingStimulus import TrainingStimulus
 from Framework.StimulusCategory import StimulusCategory
 from Framework.SessionConfig import SessionConfig
+from Framework.paths import get_app_root
 from PySide6.QtWidgets import QApplication, QGridLayout, QWidget, QHBoxLayout
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor
@@ -49,7 +50,7 @@ class RandomPositionTraining(TrainingWindow):
         self.logTrialStart()
 
     def getImage(self):
-        stimuli_path = os.path.join(os.path.dirname(__file__), "..", "Training_Stimuli")
+        stimuli_path = os.path.join(get_app_root(),"Training_Stimuli")
         image = os.path.join(stimuli_path, "Geometric_Shapes", random.choice(os.listdir(os.path.join(stimuli_path, "Geometric_Shapes"))))
         return TrainingStimulus(image, StimulusCategory.CORRECT)
 
@@ -61,8 +62,8 @@ def createTouchscreenWindow(sessionEndCallback=None):
                                   correctionTrialsActive=True,
                                   backgroundColor=QColor(255,255,255,255),
                                   errorScreenColor=QColor(255,0,0,255),
-                                  successSoundFilePath=os.path.join(os.path.dirname(__file__), "..", "SoundEffects", "600hz.wav"),
-                                  failureSoundFilePath=os.path.join(os.path.dirname(__file__), "..", "SoundEffects", "200hz.wav"),
+                                  successSoundFilePath=os.path.join(get_app_root(),"SoundEffects", "600hz.wav"),
+                                  failureSoundFilePath=os.path.join(get_app_root(),"SoundEffects", "200hz.wav"),
                                   cursorVisible=True,
                                   trainingName="Random Position")
 

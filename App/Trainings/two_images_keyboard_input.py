@@ -1,81 +1,80 @@
-from Framework.KeyboardInputImage import KeyboardInputImage
+from Framework.ImageStimulusDisplay import ImageStimulusDisplay
 from Framework.TrainingWindow import TrainingWindow
 from Framework.TrainingStimulus import TrainingStimulus
 from Framework.StimulusCategory import StimulusCategory
 from Framework.SessionConfig import SessionConfig
+from Framework.paths import get_app_root
 from PySide6.QtWidgets import QApplication, QHBoxLayout
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QColor
+from PySide6.QtGui import QColor, QShortcut, QKeySequence
 import sys
 import random
 import os
 
-class TwoImagesTraining(TrainingWindow):
-    def startFirstTrial(self):        
+class TwoImagesKeyboardTraining(TrainingWindow):
+    def startFirstTrial(self):
         self.layout = QHBoxLayout(self.container)
         self.layout.setSpacing(0)
-        self.layout.setContentsMargins(0,0,0,0)
+        self.layout.setContentsMargins(0, 0, 0, 0)
 
         trainingImages = self.getImages()
-
-        self.button1 = KeyboardInputImage(trainingImages[0], self.stimulusSelected, shortcut='a')
-        self.button2 = KeyboardInputImage(trainingImages[1], self.stimulusSelected, shortcut='d')
+        self.button1 = ImageStimulusDisplay(trainingImages[0])
+        self.button2 = ImageStimulusDisplay(trainingImages[1])
         self.layout.addWidget(self.button1, alignment=Qt.AlignCenter)
         self.layout.addWidget(self.button2, alignment=Qt.AlignCenter)
-        
+
+        self.shortcutA = QShortcut(QKeySequence(Qt.Key_A), self)
+        self.shortcutA.activated.connect(lambda: self._keySelect(self.button1))
+        self.shortcutD = QShortcut(QKeySequence(Qt.Key_D), self)
+        self.shortcutD.activated.connect(lambda: self._keySelect(self.button2))
+
         self.logTrialStart()
+
+    def _keySelect(self, display: ImageStimulusDisplay):
+        if display.trainingImage is not None and self.container.isVisible():
+            self.stimulusSelected(display.trainingImage)
 
     def startNextTrial(self):
         trainingImages = self.getImages()
-        
         self.button1.changeImage(trainingImages[0])
         self.button2.changeImage(trainingImages[1])
         self.container.show()
-        
         self.logTrialStart()
-        
+
     def startCorrectionTrial(self):
         self.container.show()
-        
         self.logTrialStart()
 
     def getImages(self):
-        stimuli_path = os.path.join(os.path.dirname(__file__), "..", "Training_Stimuli")
+        stimuli_path = os.path.join(get_app_root(), "Training_Stimuli")
         image1 = os.path.join(stimuli_path, "Paintings", random.choice(os.listdir(os.path.join(stimuli_path, "Paintings"))))
         image2 = os.path.join(stimuli_path, "Underwater", random.choice(os.listdir(os.path.join(stimuli_path, "Underwater"))))
-
         trainingImages = [TrainingStimulus(image1, StimulusCategory.CORRECT), TrainingStimulus(image2, StimulusCategory.WRONG)]
         random.shuffle(trainingImages)
-
         return trainingImages
 
 def createTouchscreenWindow(sessionEndCallback=None):
     sessionConfig = SessionConfig(interTrialInterval=2000,
-                                  errorScreenDuration=1000, 
-                                  correctionTrialInterTrialInterval=1000, 
-                                  numberOfTrials=5, 
-                                  correctionTrialsActive=True, 
-                                  backgroundColor=QColor(255,255,255,255), 
-                                  errorScreenColor=QColor(255,0,0,255), 
-                                  successSoundFilePath=os.path.join(os.path.dirname(__file__), "..", "SoundEffects", "600hz.wav"), 
-                                  failureSoundFilePath=os.path.join(os.path.dirname(__file__), "..", "SoundEffects", "200hz.wav"),
+                                  errorScreenDuration=1000,
+                                  correctionTrialInterTrialInterval=1000,
+                                  numberOfTrials=5,
+                                  correctionTrialsActive=True,
+                                  backgroundColor=QColor(255,255,255,255),
+                                  errorScreenColor=QColor(255,0,0,255),
+                                  successSoundFilePath=os.path.join(get_app_root(), "SoundEffects", "600hz.wav"),
+                                  failureSoundFilePath=os.path.join(get_app_root(), "SoundEffects", "200hz.wav"),
                                   cursorVisible=True,
-                                  trainingName="Two Images")
+                                  trainingName="Two Images Keyboard")
 
-    trainingWindow = TwoImagesTraining(sessionConfig, sessionEndCallback=sessionEndCallback)
-
+    trainingWindow = TwoImagesKeyboardTraining(sessionConfig, sessionEndCallback=sessionEndCallback)
     trainingWindow.startFirstTrial()
-
     return trainingWindow
 
 def startApp():
     app = QApplication([])
-
     trainingWindow = createTouchscreenWindow()
-
     trainingWindow.showFullScreen()
-    
     sys.exit(app.exec())
 
 if __name__ == "__main__":
-    app = startApp()
+    startApp()

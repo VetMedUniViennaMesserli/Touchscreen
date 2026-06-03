@@ -3,6 +3,7 @@ from Framework.TrainingWindow import TrainingWindow
 from Framework.TrainingStimulus import TrainingStimulus
 from Framework.StimulusCategory import StimulusCategory
 from Framework.SessionConfig import SessionConfig
+from Framework.paths import get_app_root
 from PySide6.QtWidgets import QApplication, QGridLayout
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor
@@ -55,7 +56,7 @@ class SequentialLearningTraining(TrainingWindow):
         self._resetTrial()
 
     def getImages(self):
-        image = os.path.join(os.path.dirname(__file__), "..", "Training_Stimuli", "Geometric_Shapes", "Circle_Red.png")
+        image = os.path.join(get_app_root(),"Training_Stimuli", "Geometric_Shapes", "Circle_Red.png")
         trainingImage = TrainingStimulus(image, StimulusCategory.OTHER)
         return [copy.copy(trainingImage) for _ in range(len(self._POSITIONS))]
 
@@ -67,8 +68,8 @@ def createTouchscreenWindow(sessionEndCallback=None):
                                   correctionTrialsActive=True,
                                   backgroundColor=QColor(255,255,255,255),
                                   errorScreenColor=QColor(255,0,0,255),
-                                  successSoundFilePath=os.path.join(os.path.dirname(__file__), "..", "SoundEffects", "600hz.wav"),
-                                  failureSoundFilePath=os.path.join(os.path.dirname(__file__), "..", "SoundEffects", "200hz.wav"),
+                                  successSoundFilePath=os.path.join(get_app_root(),"SoundEffects", "600hz.wav"),
+                                  failureSoundFilePath=os.path.join(get_app_root(),"SoundEffects", "200hz.wav"),
                                   cursorVisible=True,
                                   trainingName="Sequential Learning")
 

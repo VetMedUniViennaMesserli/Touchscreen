@@ -49,6 +49,8 @@ bash build.sh
 
 Standalone binaries are placed in `dist/`. Requires the venv to be set up first.
 
+Session logs are written to `dist/SessionLogs/` when running a built binary.
+
 ## Deploy on Linux (systemd user service)
 
 The service expects the repo to be cloned at `~/Touchscreen`.
@@ -62,4 +64,4 @@ systemctl --user start touchscreen.service
 
 > [!TIP]
 > On Raspberry Pi, enable the "overlay filesystem" option to prevent SD card corruption.
-> Collect session logs from `SessionLogs/` via network or USB stick.
+> Session logs are written to `~/Touchscreen/SessionLogs/`. Collect them via network or USB stick.

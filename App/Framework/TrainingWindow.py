@@ -8,18 +8,20 @@ from datetime import datetime
 from Framework.TrainingStimulus import TrainingStimulus
 from Framework.StimulusCategory import StimulusCategory
 from Framework.SessionConfig import SessionConfig
+from Framework.paths import get_log_root
 
 class TrainingWindow(QWidget):
     def __init__(self, sessionConfig: SessionConfig, parent=None, sessionEndCallback=None):
         super().__init__(parent=parent)
 
-        logDir = os.path.join("SessionLogs", sessionConfig.trainingName.replace(' ', '_'))
+        logDir = os.path.join(get_log_root(), "SessionLogs", sessionConfig.trainingName.replace(' ', '_'))
         os.makedirs(logDir, exist_ok=True)
         logFilePath = os.path.join(logDir, str(datetime.now()).replace(' ', '_').replace(':', '-') + ".csv")
 
         self.logger = logging.getLogger(logFilePath)
         self.logger.setLevel(logging.INFO)
-        handler = logging.FileHandler(logFilePath)
+        self._logFile = open(logFilePath, 'a', buffering=1)
+        handler = logging.StreamHandler(self._logFile)
         handler.setFormatter(logging.Formatter('%(asctime)s, %(message)s'))
         self.logger.addHandler(handler)
 
