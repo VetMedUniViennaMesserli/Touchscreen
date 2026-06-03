@@ -38,8 +38,20 @@ Edit `touchscreen.sh` to select which training to run. Available trainings:
 | `matching_to_sample.py` | Matching to sample |
 | `random_position.py` | Random position |
 | `sequential_learning.py` | Sequential learning |
+| `rule_learning.py` | Second-order rule learning (touchscreen or keyboard: A / D) |
 
 Press `Escape` or `Q` to quit.
+
+### Rule learning
+
+The rule learning task presents two geometric shapes side by side. The background colour signals which rule is active:
+
+| Background | Rule | Rewarded stimulus |
+|---|---|---|
+| Light grey | Rule A | Target **colour** |
+| Purple | Rule B | Target **shape** |
+
+The target shape, target colour, and which rule is presented first are randomised at the start of each run. Sessions progress through four phases — Rule A, Rule B, Alternating (blocked), Mixed (interleaved) — advancing to the next phase only once the session criterion is reached (≥ N/2 − 1 correct per trial type). Each session begins with 4 error-reduced trials (one stimulus shown). Wrong choices trigger a correction trial (up to 5 attempts).
 
 ## Building executables (optional)
 
