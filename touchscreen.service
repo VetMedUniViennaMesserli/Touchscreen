@@ -6,7 +6,8 @@ After=graphical-session.target
 [Service]
 Type=exec
 Restart=no
-ExecStart=%h/two_images
+WorkingDirectory=%h/Touchscreen
+ExecStart=%h/Touchscreen/touchscreen.sh
 
 [Install]
 WantedBy=graphical-session.target

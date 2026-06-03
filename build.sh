@@ -1,10 +1,20 @@
 #!/bin/bash
 
-source ./venv/bin/activate
+SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 
-pyinstaller --add-data Training_Stimuli:Training_Stimuli --add-data SoundEffects:SoundEffects  --windowed --onefile two_images.py
-pyinstaller --add-data Training_Stimuli:Training_Stimuli --add-data SoundEffects:SoundEffects  --windowed --onefile matching_to_sample.py
-pyinstaller --add-data Training_Stimuli:Training_Stimuli --add-data SoundEffects:SoundEffects  --windowed --onefile go_nogo.py
-pyinstaller --add-data Training_Stimuli:Training_Stimuli --add-data SoundEffects:SoundEffects  --windowed --onefile random_position.py
-pyinstaller --add-data Training_Stimuli:Training_Stimuli --add-data SoundEffects:SoundEffects  --windowed --onefile sequential_learning.py
-pyinstaller --add-data Training_Stimuli:Training_Stimuli --add-data SoundEffects:SoundEffects  --windowed --onefile two_images_keyboard_input.py
+source "$SCRIPT_DIR/venv/bin/activate"
+
+cd "$SCRIPT_DIR/App"
+
+for script in two_images matching_to_sample go_nogo random_position sequential_learning two_images_keyboard_input; do
+    pyinstaller \
+        --add-data "Training_Stimuli:Training_Stimuli" \
+        --add-data "SoundEffects:SoundEffects" \
+        --paths . \
+        --distpath "$SCRIPT_DIR/dist" \
+        --workpath "$SCRIPT_DIR/build" \
+        --specpath "$SCRIPT_DIR" \
+        --windowed \
+        --onefile \
+        "Trainings/${script}.py"
+done

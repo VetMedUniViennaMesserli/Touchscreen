@@ -1,52 +1,65 @@
 # Touch screen learning tool
 
+A touchscreen-based cognitive training system built with PySide6/Qt. Designed for deployment on a Raspberry Pi.
 
 ## Installation
 
-```
-Clone Repo
+Clone the repo into your home directory (the systemd service expects it there):
 
-cd Toucscreen
+```bash
+cd ~
+git clone <repo_url> Touchscreen
+cd Touchscreen
 python -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-
 ## Running
 
-for example
+```bash
+./touchscreen.sh
 ```
+
+To run a specific training directly:
+
+```bash
 source venv/bin/activate
-python two_images.py
+PYTHONPATH=App python App/Trainings/two_images.py
 ```
 
-## Building executables
+Edit `touchscreen.sh` to select which training to run. Available trainings:
 
-```
+| File | Task |
+|---|---|
+| `two_images.py` | Two-alternative forced choice (touchscreen) |
+| `two_images_keyboard_input.py` | Two-alternative forced choice (keyboard: A / D) |
+| `go_nogo.py` | Go / No-Go |
+| `matching_to_sample.py` | Matching to sample |
+| `random_position.py` | Random position |
+| `sequential_learning.py` | Sequential learning |
+
+Press `Escape` or `Q` to quit.
+
+## Building executables (optional)
+
+```bash
 bash build.sh
 ```
 
-## Deploy on Linux
+Standalone binaries are placed in `dist/`. Requires the venv to be set up first.
 
-* clone the and install every thing in a user folder
-* use autostart to run the ```touchscreen.sh```
+## Deploy on Linux (systemd user service)
+
+The service expects the repo to be cloned at `~/Touchscreen`.
+
+```bash
+cp touchscreen.service ~/.config/systemd/user/
+systemctl --user daemon-reload
+systemctl --user enable touchscreen.service
+systemctl --user start touchscreen.service
+```
 
 > [!TIP]
-> deploying on a Raspberry than activate "overlay file" to prevent SD card corruption.
-> send log files per internet or add a usb stick.
-
-
-## Build & Starting as systemd service as user
-
-```
-bash ./build.sh
-
-mkdir -p ~/bin
-
-cp dist/* ~/bin/
-
-cp touchscreen.service ~/.config/systemd/user
-
-systemctl --user daemon-reload && systemctl --user enable touchscreen.service && systemctl --user start touchscreen.service
-``` 
+> On Raspberry Pi, enable the "overlay filesystem" option to prevent SD card corruption.
+> Collect session logs from `SessionLogs/` via network or USB stick.
