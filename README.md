@@ -91,9 +91,31 @@ Two geometric shapes are shown side by side. The **background colour** signals w
 | Light grey | Rule A | Stimulus with the **target colour** |
 | Purple | Rule B | Stimulus with the **target shape** |
 
-The target shape, target colour, and starting rule are randomised at the start of each run. The experiment progresses through four phases — Rule A, Rule B, Alternating (blocked), Mixed (interleaved) — and only advances to the next phase when the session criterion is reached (≥ N/2 − 1 correct per trial type). Each session starts with 4 error-reduced trials (one stimulus hidden). Wrong choices trigger a correction trial (up to 5 attempts per trial).
+The experiment progresses through four phases — Rule A, Rule B, Alternating (blocked), Mixed (interleaved) — and only advances to the next phase when the session criterion is reached (≥ N/2 − 1 correct per trial type). Each session starts with 4 error-reduced trials (one stimulus hidden). Wrong choices trigger a correction trial (up to 5 attempts per trial).
 
 Input: touchscreen or keyboard (A = left, D = right).
+
+#### Setup dialog
+
+Rule learning opens a full-screen setup dialog before each run. Scientists select a subject from a list and can adjust session parameters via large touch-friendly controls:
+
+- **Subject** — select from the subject list
+- **First rule** / **Background (Rule A)** / **Target stimulus (S+)** — counterbalancing settings pre-filled from `subjects.csv`, editable per run
+- **Start at phase** — resume a subject from a specific phase (e.g. after criterion was reached in a previous session)
+- **Trials / session** — 8 / 16 / 24 / 32
+
+#### subjects.csv
+
+On first launch, `subjects.csv` is created automatically next to the binary (or at the repo root when running via `touchscreen.sh`) with 10 pre-configured subjects and balanced counterbalancing. Scientists can open this file in any spreadsheet application to rename subjects, adjust counterbalancing, or add rows.
+
+```
+subject_id, first_rule, bg_rule_a, target_stim, notes
+S01, RuleA, lightgrey, black triangle,
+S02, RuleB, purple, white circle,
+...
+```
+
+Session logs are stored in `SessionLogs/Rule_Learning_<subject_id>/` so each subject's data is automatically separated.
 
 ## Building executables (optional)
 
