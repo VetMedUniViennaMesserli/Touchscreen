@@ -13,7 +13,7 @@ class TrainingWindow(QWidget):
     def __init__(self, sessionConfig: SessionConfig, parent=None, sessionEndCallback=None):
         super().__init__(parent=parent)
         
-        self.soundEffect = QSoundEffect(QCoreApplication.instance())
+        self.soundEffect = QSoundEffect(self)
 
         logDir = os.path.join("SessionLogs", sessionConfig.trainingName.replace(' ', '_'))
         if not os.path.exists(logDir):
@@ -170,7 +170,4 @@ class TrainingWindow(QWidget):
         super().keyPressEvent(event)
 
     def closeApp(self):
-        print("Closing Application")
-        app = QCoreApplication.instance()
-        app.closeAllWindows()
-        app.quit()
+        QTimer.singleShot(0, QCoreApplication.instance().quit)

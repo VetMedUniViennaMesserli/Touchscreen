@@ -53,7 +53,7 @@ class GoNoGoTraining(TrainingWindow):
         return super().stimulusSelected(trainingImage)
 
     def getImage(self):
-        stimuli_path = os.path.join(os.path.dirname(__file__), "Training_Stimuli")
+        stimuli_path = os.path.join(os.path.dirname(__file__), "..", "Training_Stimuli")
         image1 = os.path.join(stimuli_path, "Paintings", random.choice(os.listdir(os.path.join(stimuli_path, "Paintings"))))
         image2 = os.path.join(stimuli_path, "Underwater", random.choice(os.listdir(os.path.join(stimuli_path, "Underwater"))))
 
@@ -70,8 +70,8 @@ def createTouchscreenWindow(sessionEndCallback=None):
                                   correctionTrialsActive=True, 
                                   backgroundColor=QColor(255,255,255,255), 
                                   errorScreenColor=QColor(255,0,0,255), 
-                                  successSoundFilePath=os.path.join(os.path.dirname(__file__), "SoundEffects", "600hz.wav"), 
-                                  failureSoundFilePath=os.path.join(os.path.dirname(__file__), "SoundEffects", "200hz.wav"),
+                                  successSoundFilePath=os.path.join(os.path.dirname(__file__), "..", "SoundEffects", "600hz.wav"), 
+                                  failureSoundFilePath=os.path.join(os.path.dirname(__file__), "..", "SoundEffects", "200hz.wav"),
                                   cursorVisible=True,
                                   trainingName="Go-NoGo")
 
