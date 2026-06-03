@@ -9,6 +9,7 @@ Phases:  RuleA → RuleB → Alternate → Mixed  (or B→A→… depending on c
 Each phase runs sessions of N_TRIALS until the session criterion is met.
 """
 
+import csv
 import os
 import random
 import sys
@@ -16,11 +17,12 @@ import sys
 from Framework.ShapeButton import ShapeButton
 from Framework.TrainingWindow import TrainingWindow
 from Framework.SessionConfig import SessionConfig
-from Framework.paths import get_app_root
+from Framework.paths import get_app_root, get_log_root
 
-from PySide6.QtWidgets import (QApplication, QHBoxLayout, QVBoxLayout,
-                                QWidget, QLabel, QPushButton)
-from PySide6.QtCore import Qt, QDateTime, QTimer
+from PySide6.QtWidgets import (QApplication, QDialog, QFormLayout, QFrame,
+                                QGroupBox, QGridLayout, QHBoxLayout, QLabel,
+                                QPushButton, QStackedWidget, QVBoxLayout, QWidget)
+from PySide6.QtCore import Qt, QDateTime, QTimer, Signal
 from PySide6.QtGui import QColor, QFont, QShortcut, QKeySequence
 
 # ---------------------------------------------------------------------------
@@ -132,15 +134,351 @@ def build_phase(phase, n, tgt_shape, oth_shape, tgt_color, oth_color):
 
 
 # ---------------------------------------------------------------------------
+# Setup dialog
+# ---------------------------------------------------------------------------
+
+_BG_COLORS = {
+    'lightgrey': QColor(180, 180, 180),
+    'purple':    QColor(128,   0, 128),
+}
+
+_BTN_H   = 64
+_FONT_MD = 14
+_FONT_LG = 18
+
+
+def _subjects_csv_path():
+    return os.path.join(get_log_root(), 'subjects.csv')
+
+
+def generate_subjects_csv():
+    """Create subjects.csv with 10 balanced subjects if it does not exist."""
+    path = _subjects_csv_path()
+    if os.path.exists(path):
+        return
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    rules = ['RuleA'] * 5 + ['RuleB'] * 5
+    bgs   = ['lightgrey', 'purple'] * 5
+    stims = ['black triangle', 'white triangle', 'black circle', 'white circle',
+             'black triangle', 'white circle',   'white triangle','black circle',
+             'black triangle', 'white triangle']
+    random.shuffle(rules); random.shuffle(bgs)
+    with open(path, 'w', newline='', encoding='utf-8') as f:
+        writer = csv.writer(f)
+        writer.writerow(['subject_id', 'first_rule', 'bg_rule_a', 'target_stim', 'notes'])
+        for i in range(10):
+            writer.writerow([f'S{i+1:02d}', rules[i], bgs[i], stims[i], ''])
+
+
+def _read_subjects():
+    path = _subjects_csv_path()
+    if not os.path.exists(path):
+        return []
+    with open(path, newline='', encoding='utf-8') as f:
+        return list(csv.DictReader(f))
+
+
+class _ToggleGroup(QWidget):
+    """Row of mutually-exclusive checkable buttons."""
+    valueChanged = Signal(str)
+
+    def __init__(self, options, selected=None, parent=None):
+        super().__init__(parent)
+        layout = QHBoxLayout(self)
+        layout.setSpacing(6)
+        layout.setContentsMargins(0, 0, 0, 0)
+        self._buttons = {}
+        self._value   = selected or options[0]
+        for opt in options:
+            self._addButton(opt)
+        self._apply(self._value)
+
+    def _addButton(self, opt):
+        btn = QPushButton(opt)
+        btn.setCheckable(True)
+        btn.setMinimumHeight(_BTN_H)
+        f = btn.font(); f.setPointSize(_FONT_MD); btn.setFont(f)
+        btn.clicked.connect(lambda _, o=opt: self._apply(o))
+        self.layout().addWidget(btn)
+        self._buttons[opt] = btn
+
+    def _apply(self, option):
+        for k, b in self._buttons.items():
+            b.setChecked(k == option)
+        self._value = option
+        self.valueChanged.emit(option)
+
+    def value(self):
+        return self._value
+
+    def setValue(self, option):
+        if option in self._buttons:
+            self._apply(option)
+
+    def setOptions(self, options, keep_value=True):
+        old = self._value if keep_value else None
+        for b in self._buttons.values():
+            self.layout().removeWidget(b)
+            b.deleteLater()
+        self._buttons.clear()
+        self._value = None
+        for opt in options:
+            self._addButton(opt)
+        self._apply(old if old in options else options[0])
+
+
+class _NumberStepper(QWidget):
+    """Touch-friendly +/- control over a discrete value list."""
+
+    def __init__(self, options, default=None, parent=None):
+        super().__init__(parent)
+        self._options = list(options)
+        self._idx     = self._options.index(default) if default in self._options else 0
+
+        layout = QHBoxLayout(self)
+        layout.setSpacing(0)
+        layout.setContentsMargins(0, 0, 0, 0)
+
+        self._btnM = QPushButton("−")
+        self._lbl  = QLabel()
+        self._btnP = QPushButton("+")
+
+        for b in (self._btnM, self._btnP):
+            b.setMinimumSize(64, _BTN_H)
+            f = b.font(); f.setPointSize(22); b.setFont(f)
+
+        self._lbl.setAlignment(Qt.AlignCenter)
+        self._lbl.setMinimumWidth(90)
+        f2 = self._lbl.font(); f2.setPointSize(_FONT_MD + 2); self._lbl.setFont(f2)
+
+        layout.addWidget(self._btnM)
+        layout.addWidget(self._lbl, 1)
+        layout.addWidget(self._btnP)
+
+        self._btnM.clicked.connect(self._dec)
+        self._btnP.clicked.connect(self._inc)
+        self._refresh()
+
+    def _dec(self):
+        if self._idx > 0:
+            self._idx -= 1
+            self._refresh()
+
+    def _inc(self):
+        if self._idx < len(self._options) - 1:
+            self._idx += 1
+            self._refresh()
+
+    def _refresh(self):
+        self._lbl.setText(str(self._options[self._idx]))
+        self._btnM.setEnabled(self._idx > 0)
+        self._btnP.setEnabled(self._idx < len(self._options) - 1)
+
+    def value(self):
+        return self._options[self._idx]
+
+
+class RuleLearningSetupDialog(QDialog):
+    """Full-screen two-page touchscreen dialog: subject grid → session parameters."""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Rule Learning — Setup")
+        self.setWindowFlags(Qt.FramelessWindowHint | Qt.Dialog)
+        self.setGeometry(QApplication.primaryScreen().geometry())
+        self._subject = None
+
+        f = QFont(); f.setPointSize(13); self.setFont(f)
+
+        self._stack = QStackedWidget()
+        self._stack.addWidget(self._buildSubjectPage())
+        self._stack.addWidget(self._buildSetupPage())
+
+        root = QVBoxLayout(self)
+        root.setContentsMargins(0, 0, 0, 0)
+        root.addWidget(self._stack)
+
+    # ── Page 0: subject grid (no scrolling) ────────────────────────────────
+
+    def _buildSubjectPage(self):
+        page = QWidget()
+        vbox = QVBoxLayout(page)
+        vbox.setSpacing(0)
+        vbox.setContentsMargins(32, 28, 32, 28)
+
+        # Header row: title + Cancel
+        header = QHBoxLayout()
+        title = QLabel("Select Subject")
+        f = title.font(); f.setPointSize(22); f.setBold(True); title.setFont(f)
+        cancelBtn = QPushButton("Cancel")
+        cancelBtn.setMinimumHeight(52)
+        cancelBtn.setMaximumWidth(140)
+        cancelBtn.clicked.connect(self.reject)
+        header.addWidget(title, 1)
+        header.addWidget(cancelBtn)
+        vbox.addLayout(header)
+
+        sep = QFrame(); sep.setFrameShape(QFrame.HLine)
+        vbox.addSpacing(12)
+        vbox.addWidget(sep)
+        vbox.addSpacing(16)
+
+        # Subject grid — 2 columns, fills available space
+        self._gridWidget = QWidget()
+        self._gridLayout = QGridLayout(self._gridWidget)
+        self._gridLayout.setSpacing(10)
+        vbox.addWidget(self._gridWidget, 1)
+
+        self._populateGrid()
+        return page
+
+    def _populateGrid(self):
+        while self._gridLayout.count():
+            item = self._gridLayout.takeAt(0)
+            if item.widget():
+                item.widget().deleteLater()
+
+        subjects = _read_subjects()
+        if not subjects:
+            lbl = QLabel("subjects.csv not found or empty.\nEdit the file and restart.")
+            lbl.setWordWrap(True)
+            self._gridLayout.addWidget(lbl, 0, 0)
+            return
+
+        for i, s in enumerate(subjects):
+            btn = QPushButton(s['subject_id'])
+            btn.setMinimumHeight(72)
+            f = btn.font(); f.setPointSize(18); f.setBold(True); btn.setFont(f)
+            btn.clicked.connect(lambda _, sub=s: self._onSubjectSelected(sub))
+            self._gridLayout.addWidget(btn, i // 2, i % 2)
+
+    def _onSubjectSelected(self, subject):
+        self._subject = subject
+        self._fillSetupPage(subject)
+        self._stack.setCurrentIndex(1)
+
+    # ── Page 1: session setup ───────────────────────────────────────────────
+
+    def _buildSetupPage(self):
+        page = QWidget()
+        vbox = QVBoxLayout(page)
+        vbox.setSpacing(12)
+        vbox.setContentsMargins(32, 20, 32, 24)
+
+        # Header row: Back + subject name
+        header = QHBoxLayout()
+        backBtn = QPushButton("← Back")
+        backBtn.setMinimumHeight(52)
+        backBtn.setMaximumWidth(140)
+        f = backBtn.font(); f.setPointSize(13); backBtn.setFont(f)
+        backBtn.clicked.connect(lambda: self._stack.setCurrentIndex(0))
+
+        self._subjectLabel = QLabel()
+        f2 = self._subjectLabel.font(); f2.setPointSize(20); f2.setBold(True)
+        self._subjectLabel.setFont(f2)
+
+        header.addWidget(backBtn)
+        header.addWidget(self._subjectLabel, 1)
+        vbox.addLayout(header)
+
+        sep = QFrame(); sep.setFrameShape(QFrame.HLine)
+        vbox.addWidget(sep)
+
+        # Counterbalancing
+        cbGrp = QGroupBox("Counterbalancing")
+        cbForm = QFormLayout(cbGrp)
+        cbForm.setSpacing(8)
+        cbForm.setContentsMargins(12, 8, 12, 8)
+
+        self._firstRule  = _ToggleGroup(['RuleA', 'RuleB'])
+        self._bgA        = _ToggleGroup(['lightgrey', 'purple'])
+        self._targetStim = _ToggleGroup(['black triangle', 'white triangle',
+                                          'black circle',  'white circle'])
+        cbForm.addRow("First rule:", self._firstRule)
+        cbForm.addRow("Background (Rule A):", self._bgA)
+        cbForm.addRow("Target stimulus (S+):", self._targetStim)
+        vbox.addWidget(cbGrp)
+
+        # Session
+        sessGrp = QGroupBox("Session")
+        sessForm = QFormLayout(sessGrp)
+        sessForm.setSpacing(8)
+        sessForm.setContentsMargins(12, 8, 12, 8)
+
+        self._startAt = _ToggleGroup(['Beginning', 'RuleA', 'RuleB', 'AlternateA', 'Mixed'])
+        self._nTrials = _NumberStepper([8, 16, 24, 32], default=24)
+        sessForm.addRow("Start at phase:", self._startAt)
+        sessForm.addRow("Trials / session:", self._nTrials)
+        vbox.addWidget(sessGrp)
+
+        self._firstRule.valueChanged.connect(self._updateStartAt)
+
+        startBtn = QPushButton("▶  Start")
+        startBtn.setMinimumHeight(72)
+        f3 = startBtn.font(); f3.setPointSize(_FONT_LG); f3.setBold(True)
+        startBtn.setFont(f3)
+        startBtn.clicked.connect(self.accept)
+        vbox.addWidget(startBtn)
+
+        return page
+
+    def _fillSetupPage(self, subject):
+        self._subjectLabel.setText(f"Subject: {subject['subject_id']}")
+        first = subject.get('first_rule', 'RuleA')
+        self._firstRule.setValue(first)
+        self._bgA.setValue(subject.get('bg_rule_a', 'lightgrey'))
+        self._targetStim.setValue(subject.get('target_stim', 'black triangle'))
+        self._updateStartAt(first)
+
+    def _updateStartAt(self, first_rule):
+        opts = ['Beginning'] + (
+            ['RuleA', 'RuleB', 'AlternateA', 'Mixed'] if first_rule == 'RuleA'
+            else ['RuleB', 'RuleA', 'AlternateB', 'Mixed']
+        )
+        self._startAt.setOptions(opts)
+
+    # ── Result ──────────────────────────────────────────────────────────────
+
+    @property
+    def settings(self):
+        first_rule = self._firstRule.value()
+        bg_a       = self._bgA.value()
+        tgt_color, tgt_shape = self._targetStim.value().split()
+
+        full_phases = (['RuleA', 'RuleB', 'AlternateA', 'Mixed'] if first_rule == 'RuleA'
+                       else ['RuleB', 'RuleA', 'AlternateB', 'Mixed'])
+        start_at = self._startAt.value()
+        phases   = (full_phases if start_at == 'Beginning' or start_at not in full_phases
+                    else full_phases[full_phases.index(start_at):])
+
+        return {
+            'subject_id': self._subject['subject_id'],
+            'tgt_color':  tgt_color,
+            'tgt_shape':  tgt_shape,
+            'oth_color':  OPPOSITE[tgt_color],
+            'oth_shape':  OPPOSITE[tgt_shape],
+            'bg_rule_a':  bg_a,
+            'phases':     phases,
+            'n_trials':   self._nTrials.value(),
+        }
+
+
+# ---------------------------------------------------------------------------
 # Training class
 # ---------------------------------------------------------------------------
 
 class RuleLearningTraining(TrainingWindow):
     def __init__(self, sessionConfig, tgt_shape, oth_shape,
                  tgt_color, oth_color, phase_order, n_trials=N_TRIALS,
+                 bg_rule_a='lightgrey', subject_id='',
                  parent=None, sessionEndCallback=None):
         super().__init__(sessionConfig, parent, sessionEndCallback)
 
+        self._subject_id  = subject_id
+        self._rule_bg     = {
+            'RuleA': _BG_COLORS[bg_rule_a],
+            'RuleB': _BG_COLORS['purple' if bg_rule_a == 'lightgrey' else 'lightgrey'],
+        }
         self._tgt_shape   = tgt_shape
         self._oth_shape   = oth_shape
         self._tgt_color   = tgt_color
@@ -210,6 +548,12 @@ class RuleLearningTraining(TrainingWindow):
         self._er_trials = self._buildERTrials()
         self._er_idx = 0
 
+        if self._phase_idx == 0:
+            self.logger.info(
+                f"setup, subject={self._subject_id}, "
+                f"tgt_shape={self._tgt_shape}, tgt_color={self._tgt_color}, "
+                f"phases={self._phase_order}"
+            )
         self.logger.info(f"phase_start, phase={phase}, session={self._session_count}")
         self._nextTrial()
 
@@ -244,7 +588,7 @@ class RuleLearningTraining(TrainingWindow):
 
         # background = first trial's rule background
         first_rule = self._trials[0]['rule'] if self._trials else 'RuleA'
-        self.setBackgroundColor(RULE_BG[first_rule])
+        self.setBackgroundColor(self._rule_bg[first_rule])
 
         self._btnL.setStimVisible(cs == 'left')
         self._btnR.setStimVisible(cs == 'right')
@@ -271,7 +615,7 @@ class RuleLearningTraining(TrainingWindow):
 
     def _showTrial(self):
         tr = self._current
-        self.setBackgroundColor(RULE_BG[tr['rule']])
+        self.setBackgroundColor(self._rule_bg[tr['rule']])
 
         self._btnL.shape = tr['left_shape'];   self._btnL.color = tr['left_color']
         self._btnR.shape = tr['right_shape'];  self._btnR.color = tr['right_color']
@@ -456,15 +800,11 @@ class RuleLearningTraining(TrainingWindow):
 # ---------------------------------------------------------------------------
 
 def createTouchscreenWindow(sessionEndCallback=None):
-    # Random counterbalancing
-    tgt_color = random.choice(['black', 'white'])
-    tgt_shape = random.choice(['triangle', 'circle'])
-    oth_color = OPPOSITE[tgt_color]
-    oth_shape = OPPOSITE[tgt_shape]
-    first     = random.choice(['RuleA', 'RuleB'])
+    dlg = RuleLearningSetupDialog()
+    if not dlg.exec():
+        return None
 
-    phases = (['RuleA', 'RuleB', 'AlternateA', 'Mixed'] if first == 'RuleA'
-              else ['RuleB', 'RuleA', 'AlternateB', 'Mixed'])
+    s = dlg.settings
 
     sessionConfig = SessionConfig(
         interTrialInterval=500,
@@ -477,15 +817,17 @@ def createTouchscreenWindow(sessionEndCallback=None):
         successSoundFilePath=os.path.join(get_app_root(), "SoundEffects", "600hz.wav"),
         failureSoundFilePath=os.path.join(get_app_root(), "SoundEffects", "200hz.wav"),
         cursorVisible=True,
-        trainingName="Rule Learning",
+        trainingName=f"Rule_Learning_{s['subject_id']}",
     )
 
     w = RuleLearningTraining(
         sessionConfig,
-        tgt_shape=tgt_shape, oth_shape=oth_shape,
-        tgt_color=tgt_color, oth_color=oth_color,
-        phase_order=phases,
-        n_trials=N_TRIALS,
+        tgt_shape=s['tgt_shape'], oth_shape=s['oth_shape'],
+        tgt_color=s['tgt_color'], oth_color=s['oth_color'],
+        phase_order=s['phases'],
+        n_trials=s['n_trials'],
+        bg_rule_a=s['bg_rule_a'],
+        subject_id=s['subject_id'],
         sessionEndCallback=sessionEndCallback,
     )
     w.startFirstTrial()
@@ -494,7 +836,10 @@ def createTouchscreenWindow(sessionEndCallback=None):
 
 def startApp():
     app = QApplication([])
+    generate_subjects_csv()   # create subjects.csv with 10 subjects on first run
     w = createTouchscreenWindow()
+    if w is None:
+        sys.exit(0)
     w.showFullScreen()
     sys.exit(app.exec())
 
