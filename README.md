@@ -2,13 +2,23 @@
 
 A touchscreen-based cognitive training system built with PySide6/Qt. Designed for deployment on a Raspberry Pi.
 
-## Installation
+## Quick install (Linux)
+
+Clones the repo, sets up the virtual environment, and enables the systemd autostart service in one command:
+
+```bash
+bash <(curl -sSL https://raw.githubusercontent.com/VetMedUniViennaMesserli/Touchscreen/main/install.sh)
+```
+
+Run the same command again to update an existing installation.
+
+## Manual installation
 
 Clone the repo into your home directory (the systemd service expects it there):
 
 ```bash
 cd ~
-git clone <repo_url> Touchscreen
+git clone https://github.com/VetMedUniViennaMesserli/Touchscreen.git Touchscreen
 cd Touchscreen
 python -m venv venv
 source venv/bin/activate
@@ -129,7 +139,7 @@ Session logs are written to `dist/SessionLogs/` when running a built binary.
 
 ## Deploy on Linux (systemd user service)
 
-The service expects the repo to be cloned at `~/Touchscreen`.
+The quick install above handles this automatically. To set it up manually, the service expects the repo to be cloned at `~/Touchscreen`.
 
 ```bash
 cp touchscreen.service ~/.config/systemd/user/
