@@ -75,6 +75,12 @@ systemctl --user start touchscreen.service
 > On Raspberry Pi, enable the "overlay filesystem" option to prevent SD card corruption.
 > Session logs are written to `~/Touchscreen/SessionLogs/`. Collect them via network or USB stick.
 
+To stop the service from starting automatically:
+
+```bash
+systemctl --user disable touchscreen.service
+```
+
 ## Trainings
 
 ### Two images (`two_images.py`)
