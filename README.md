@@ -12,19 +12,6 @@ bash <(curl -sSL https://raw.githubusercontent.com/VetMedUniViennaMesserli/Touch
 
 Run the same command again to update an existing installation.
 
-## Manual installation
-
-Clone the repo into your home directory (the systemd service expects it there):
-
-```bash
-cd ~
-git clone https://github.com/VetMedUniViennaMesserli/Touchscreen.git Touchscreen
-cd Touchscreen
-python -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-```
-
 ## Running
 
 ```bash
@@ -41,6 +28,44 @@ PYTHONPATH=App python App/Trainings/two_images.py
 Edit `touchscreen.sh` to select which training to run.
 
 Press `Escape` or `Q` to quit.
+
+## Manual installation
+
+Clone the repo into your home directory (the systemd service expects it there):
+
+```bash
+cd ~
+git clone https://github.com/VetMedUniViennaMesserli/Touchscreen.git Touchscreen
+cd Touchscreen
+python -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+```
+
+## Building executables (optional)
+
+```bash
+bash build.sh
+```
+
+Standalone binaries are placed in `dist/`. Requires the venv to be set up first.
+
+Session logs are written to `dist/SessionLogs/` when running a built binary.
+
+## Deploy on Linux (systemd user service)
+
+The quick install above handles this automatically. To set it up manually, the service expects the repo to be cloned at `~/Touchscreen`.
+
+```bash
+cp touchscreen.service ~/.config/systemd/user/
+systemctl --user daemon-reload
+systemctl --user enable touchscreen.service
+systemctl --user start touchscreen.service
+```
+
+> [!TIP]
+> On Raspberry Pi, enable the "overlay filesystem" option to prevent SD card corruption.
+> Session logs are written to `~/Touchscreen/SessionLogs/`. Collect them via network or USB stick.
 
 ## Trainings
 
@@ -126,28 +151,3 @@ S02, RuleB, purple, white circle,
 ```
 
 Session logs are stored in `SessionLogs/Rule_Learning_<subject_id>/` so each subject's data is automatically separated.
-
-## Building executables (optional)
-
-```bash
-bash build.sh
-```
-
-Standalone binaries are placed in `dist/`. Requires the venv to be set up first.
-
-Session logs are written to `dist/SessionLogs/` when running a built binary.
-
-## Deploy on Linux (systemd user service)
-
-The quick install above handles this automatically. To set it up manually, the service expects the repo to be cloned at `~/Touchscreen`.
-
-```bash
-cp touchscreen.service ~/.config/systemd/user/
-systemctl --user daemon-reload
-systemctl --user enable touchscreen.service
-systemctl --user start touchscreen.service
-```
-
-> [!TIP]
-> On Raspberry Pi, enable the "overlay filesystem" option to prevent SD card corruption.
-> Session logs are written to `~/Touchscreen/SessionLogs/`. Collect them via network or USB stick.
