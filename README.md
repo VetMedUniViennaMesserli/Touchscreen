@@ -14,20 +14,28 @@ Run the same command again to update an existing installation.
 
 ## Running
 
+Navigate to the installation directory and run the launcher script:
+
 ```bash
+cd ~/Touchscreen
 ./touchscreen.sh
 ```
 
-To run a specific training directly:
+The script activates the virtual environment and starts whichever training is configured inside it. To change the active training, open `touchscreen.sh` and update the `APP=` line to point to a different training file, for example:
 
 ```bash
+APP="App/Trainings/rule_learning.py"
+```
+
+To run a specific training directly without editing the script:
+
+```bash
+cd ~/Touchscreen
 source venv/bin/activate
 PYTHONPATH=App python App/Trainings/two_images.py
 ```
 
-Edit `touchscreen.sh` to select which training to run.
-
-Press `Escape` or `Q` to quit.
+Press `Escape` or `Q` to quit any training.
 
 ## Manual installation
 
