@@ -50,16 +50,6 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-## Building executables (optional)
-
-```bash
-bash build.sh
-```
-
-Standalone binaries are placed in `dist/`. Requires the venv to be set up first.
-
-Session logs are written to `dist/SessionLogs/` when running a built binary.
-
 ## Deploy on Linux (systemd user service)
 
 The quick install above handles this automatically. To set it up manually, the service expects the repo to be cloned at `~/Touchscreen`.
@@ -80,6 +70,16 @@ To stop the service from starting automatically:
 ```bash
 systemctl --user disable touchscreen.service
 ```
+
+## Building executables (optional)
+
+```bash
+bash build.sh
+```
+
+Standalone binaries are placed in `dist/`. Requires the venv to be set up first.
+
+Session logs are written to `dist/SessionLogs/` when running a built binary.
 
 ## Trainings
 
