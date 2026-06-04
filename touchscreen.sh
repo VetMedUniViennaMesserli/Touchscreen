@@ -9,8 +9,8 @@ SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 
 ## define which app to run
 #APP="App/Trainings/random_position.py"
-#APP="App/Trainings/two_images.py"
-APP="App/Trainings/two_images_keyboard_input.py"
+APP="App/Trainings/two_images.py"
+#APP="App/Trainings/two_images_keyboard_input.py"
 
 ## execute python from virtual environment directly
 PYTHONPATH="$SCRIPT_DIR/App" "$SCRIPT_DIR"/venv/bin/python3 "$SCRIPT_DIR"/"$APP"
