@@ -147,13 +147,13 @@ _FONT_MD = 14
 _FONT_LG = 18
 
 
-def _subjects_csv_path():
-    return os.path.join(get_log_root(), 'subjects.csv')
+def _individuals_csv_path():
+    return os.path.join(get_log_root(), 'individuals.csv')
 
 
-def generate_subjects_csv():
-    """Create subjects.csv with 10 balanced subjects if it does not exist."""
-    path = _subjects_csv_path()
+def generate_individuals_csv():
+    """Create individuals.csv with 10 balanced individuals if it does not exist."""
+    path = _individuals_csv_path()
     if os.path.exists(path):
         return
     os.makedirs(os.path.dirname(path), exist_ok=True)
@@ -165,13 +165,13 @@ def generate_subjects_csv():
     random.shuffle(rules); random.shuffle(bgs)
     with open(path, 'w', newline='', encoding='utf-8') as f:
         writer = csv.writer(f)
-        writer.writerow(['subject_id', 'first_rule', 'bg_rule_a', 'target_stim', 'notes'])
+        writer.writerow(['individual_id', 'first_rule', 'bg_rule_a', 'target_stim', 'notes'])
         for i in range(10):
             writer.writerow([f'S{i+1:02d}', rules[i], bgs[i], stims[i], ''])
 
 
-def _read_subjects():
-    path = _subjects_csv_path()
+def _read_individuals():
+    path = _individuals_csv_path()
     if not os.path.exists(path):
         return []
     with open(path, newline='', encoding='utf-8') as f:
@@ -279,28 +279,28 @@ class _NumberStepper(QWidget):
 
 
 class RuleLearningSetupDialog(QDialog):
-    """Full-screen two-page touchscreen dialog: subject grid → session parameters."""
+    """Full-screen two-page touchscreen dialog: individual grid → session parameters."""
 
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Rule Learning — Setup")
         self.setWindowFlags(Qt.FramelessWindowHint | Qt.Dialog)
         self.setGeometry(QApplication.primaryScreen().geometry())
-        self._subject = None
+        self._individual = None
 
         f = QFont(); f.setPointSize(13); self.setFont(f)
 
         self._stack = QStackedWidget()
-        self._stack.addWidget(self._buildSubjectPage())
+        self._stack.addWidget(self._buildIndividualPage())
         self._stack.addWidget(self._buildSetupPage())
 
         root = QVBoxLayout(self)
         root.setContentsMargins(0, 0, 0, 0)
         root.addWidget(self._stack)
 
-    # ── Page 0: subject grid (no scrolling) ────────────────────────────────
+    # ── Page 0: individual grid (no scrolling) ─────────────────────────────
 
-    def _buildSubjectPage(self):
+    def _buildIndividualPage(self):
         page = QWidget()
         vbox = QVBoxLayout(page)
         vbox.setSpacing(0)
@@ -308,7 +308,7 @@ class RuleLearningSetupDialog(QDialog):
 
         # Header row: title + Cancel
         header = QHBoxLayout()
-        title = QLabel("Select Subject")
+        title = QLabel("Select Individual")
         f = title.font(); f.setPointSize(22); f.setBold(True); title.setFont(f)
         cancelBtn = QPushButton("Cancel")
         cancelBtn.setMinimumHeight(52)
@@ -323,7 +323,7 @@ class RuleLearningSetupDialog(QDialog):
         vbox.addWidget(sep)
         vbox.addSpacing(16)
 
-        # Subject grid — 2 columns, fills available space
+        # Individual grid — 2 columns, fills available space
         self._gridWidget = QWidget()
         self._gridLayout = QGridLayout(self._gridWidget)
         self._gridLayout.setSpacing(10)
@@ -338,23 +338,23 @@ class RuleLearningSetupDialog(QDialog):
             if item.widget():
                 item.widget().deleteLater()
 
-        subjects = _read_subjects()
-        if not subjects:
-            lbl = QLabel("subjects.csv not found or empty.\nEdit the file and restart.")
+        individuals = _read_individuals()
+        if not individuals:
+            lbl = QLabel("individuals.csv not found or empty.\nEdit the file and restart.")
             lbl.setWordWrap(True)
             self._gridLayout.addWidget(lbl, 0, 0)
             return
 
-        for i, s in enumerate(subjects):
-            btn = QPushButton(s['subject_id'])
+        for i, s in enumerate(individuals):
+            btn = QPushButton(s['individual_id'])
             btn.setMinimumHeight(72)
             f = btn.font(); f.setPointSize(18); f.setBold(True); btn.setFont(f)
-            btn.clicked.connect(lambda _, sub=s: self._onSubjectSelected(sub))
+            btn.clicked.connect(lambda _, ind=s: self._onIndividualSelected(ind))
             self._gridLayout.addWidget(btn, i // 2, i % 2)
 
-    def _onSubjectSelected(self, subject):
-        self._subject = subject
-        self._fillSetupPage(subject)
+    def _onIndividualSelected(self, individual):
+        self._individual = individual
+        self._fillSetupPage(individual)
         self._stack.setCurrentIndex(1)
 
     # ── Page 1: session setup ───────────────────────────────────────────────
@@ -365,7 +365,7 @@ class RuleLearningSetupDialog(QDialog):
         vbox.setSpacing(12)
         vbox.setContentsMargins(32, 20, 32, 24)
 
-        # Header row: Back + subject name
+        # Header row: Back + individual name
         header = QHBoxLayout()
         backBtn = QPushButton("← Back")
         backBtn.setMinimumHeight(52)
@@ -373,12 +373,12 @@ class RuleLearningSetupDialog(QDialog):
         f = backBtn.font(); f.setPointSize(13); backBtn.setFont(f)
         backBtn.clicked.connect(lambda: self._stack.setCurrentIndex(0))
 
-        self._subjectLabel = QLabel()
-        f2 = self._subjectLabel.font(); f2.setPointSize(20); f2.setBold(True)
-        self._subjectLabel.setFont(f2)
+        self._individualLabel = QLabel()
+        f2 = self._individualLabel.font(); f2.setPointSize(20); f2.setBold(True)
+        self._individualLabel.setFont(f2)
 
         header.addWidget(backBtn)
-        header.addWidget(self._subjectLabel, 1)
+        header.addWidget(self._individualLabel, 1)
         vbox.addLayout(header)
 
         sep = QFrame(); sep.setFrameShape(QFrame.HLine)
@@ -422,12 +422,12 @@ class RuleLearningSetupDialog(QDialog):
 
         return page
 
-    def _fillSetupPage(self, subject):
-        self._subjectLabel.setText(f"Subject: {subject['subject_id']}")
-        first = subject.get('first_rule', 'RuleA')
+    def _fillSetupPage(self, individual):
+        self._individualLabel.setText(f"Individual: {individual['individual_id']}")
+        first = individual.get('first_rule', 'RuleA')
         self._firstRule.setValue(first)
-        self._bgA.setValue(subject.get('bg_rule_a', 'lightgrey'))
-        self._targetStim.setValue(subject.get('target_stim', 'black triangle'))
+        self._bgA.setValue(individual.get('bg_rule_a', 'lightgrey'))
+        self._targetStim.setValue(individual.get('target_stim', 'black triangle'))
         self._updateStartAt(first)
 
     def _updateStartAt(self, first_rule):
@@ -452,7 +452,7 @@ class RuleLearningSetupDialog(QDialog):
                     else full_phases[full_phases.index(start_at):])
 
         return {
-            'subject_id': self._subject['subject_id'],
+            'individual_id': self._individual['individual_id'],
             'tgt_color':  tgt_color,
             'tgt_shape':  tgt_shape,
             'oth_color':  OPPOSITE[tgt_color],
@@ -470,11 +470,11 @@ class RuleLearningSetupDialog(QDialog):
 class RuleLearningTraining(TrainingWindow):
     def __init__(self, sessionConfig, tgt_shape, oth_shape,
                  tgt_color, oth_color, phase_order, n_trials=N_TRIALS,
-                 bg_rule_a='lightgrey', subject_id='',
+                 bg_rule_a='lightgrey', individual_id='',
                  parent=None, sessionEndCallback=None):
         super().__init__(sessionConfig, parent, sessionEndCallback)
 
-        self._subject_id  = subject_id
+        self._individual_id  = individual_id
         self._rule_bg     = {
             'RuleA': _BG_COLORS[bg_rule_a],
             'RuleB': _BG_COLORS['purple' if bg_rule_a == 'lightgrey' else 'lightgrey'],
@@ -550,7 +550,7 @@ class RuleLearningTraining(TrainingWindow):
 
         if self._phase_idx == 0:
             self.logger.info(
-                f"setup, subject={self._subject_id}, "
+                f"setup, individual={self._individual_id}, "
                 f"tgt_shape={self._tgt_shape}, tgt_color={self._tgt_color}, "
                 f"phases={self._phase_order}"
             )
@@ -817,7 +817,7 @@ def createTouchscreenWindow(sessionEndCallback=None):
         successSoundFilePath=os.path.join(get_app_root(), "SoundEffects", "600hz.wav"),
         failureSoundFilePath=os.path.join(get_app_root(), "SoundEffects", "200hz.wav"),
         cursorVisible=True,
-        trainingName=f"Rule_Learning_{s['subject_id']}",
+        trainingName=f"Rule_Learning_{s['individual_id']}",
     )
 
     w = RuleLearningTraining(
@@ -827,7 +827,7 @@ def createTouchscreenWindow(sessionEndCallback=None):
         phase_order=s['phases'],
         n_trials=s['n_trials'],
         bg_rule_a=s['bg_rule_a'],
-        subject_id=s['subject_id'],
+        individual_id=s['individual_id'],
         sessionEndCallback=sessionEndCallback,
     )
     w.startFirstTrial()
@@ -836,7 +836,7 @@ def createTouchscreenWindow(sessionEndCallback=None):
 
 def startApp():
     app = QApplication([])
-    generate_subjects_csv()   # create subjects.csv with 10 subjects on first run
+    generate_individuals_csv()   # create individuals.csv with 10 individuals on first run
     w = createTouchscreenWindow()
     if w is None:
         sys.exit(0)

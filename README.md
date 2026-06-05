@@ -85,7 +85,7 @@ Session logs are written to `dist/SessionLogs/` when running a built binary.
 
 ### Two images (`two_images.py`)
 
-Two images are shown side by side — one from the **Paintings** category (correct) and one from the **Underwater** category (wrong). Their left/right position is randomised each trial. The subject must touch the painting. Feedback: success sound + inter-trial interval on correct; error sound + red screen on wrong.
+Two images are shown side by side — one from the **Paintings** category (correct) and one from the **Underwater** category (wrong). Their left/right position is randomised each trial. The individual must touch the painting. Feedback: success sound + inter-trial interval on correct; error sound + red screen on wrong.
 
 Input: touchscreen.
 
@@ -101,7 +101,7 @@ Input: keyboard (A / D).
 
 ### Go / No-Go (`go_nogo.py`)
 
-A single image is shown for up to **2 seconds**. The subject should touch it if it is a Painting (Go trial) and withhold if it is an Underwater image (No-Go trial). Not touching within the timeout counts as a correct No-Go response; touching a No-Go stimulus or not touching a Go stimulus counts as an error.
+A single image is shown for up to **2 seconds**. The individual should touch it if it is a Painting (Go trial) and withhold if it is an Underwater image (No-Go trial). Not touching within the timeout counts as a correct No-Go response; touching a No-Go stimulus or not touching a Go stimulus counts as an error.
 
 Input: touchscreen.
 
@@ -109,7 +109,7 @@ Input: touchscreen.
 
 ### Matching to sample (`matching_to_sample.py`)
 
-A sample geometric shape is shown alone for **1 second**, then replaced by two choice shapes. The subject must touch the shape that matches the sample. Stimuli are drawn from `Training_Stimuli/Geometric_Shapes/`.
+A sample geometric shape is shown alone for **1 second**, then replaced by two choice shapes. The individual must touch the shape that matches the sample. Stimuli are drawn from `Training_Stimuli/Geometric_Shapes/`.
 
 Input: touchscreen.
 
@@ -117,7 +117,7 @@ Input: touchscreen.
 
 ### Random position (`random_position.py`)
 
-A single geometric shape is placed at a random position in a **5 × 4 grid**. The subject must touch it regardless of where it appears. Trains position-independent stimulus recognition.
+A single geometric shape is placed at a random position in a **5 × 4 grid**. The individual must touch it regardless of where it appears. Trains position-independent stimulus recognition.
 
 Input: touchscreen.
 
@@ -125,7 +125,7 @@ Input: touchscreen.
 
 ### Sequential learning (`sequential_learning.py`)
 
-Eight identical red circles are arranged in a U-shape across a **2 × 4 grid**. The subject must touch them in a fixed order (bottom row left-to-right, then top row right-to-left). Each correctly touched circle disappears; touching the wrong one triggers an error.
+Eight identical red circles are arranged in a U-shape across a **2 × 4 grid**. The individual must touch them in a fixed order (bottom row left-to-right, then top row right-to-left). Each correctly touched circle disappears; touching the wrong one triggers an error.
 
 Input: touchscreen.
 
@@ -146,22 +146,22 @@ Input: touchscreen or keyboard (A = left, D = right).
 
 #### Setup dialog
 
-Rule learning opens a full-screen setup dialog before each run. Scientists select a subject from a list and can adjust session parameters via large touch-friendly controls:
+Rule learning opens a full-screen setup dialog before each run. Scientists select an individual from a list and can adjust session parameters via large touch-friendly controls:
 
-- **Subject** — select from the subject list
-- **First rule** / **Background (Rule A)** / **Target stimulus (S+)** — counterbalancing settings pre-filled from `subjects.csv`, editable per run
-- **Start at phase** — resume a subject from a specific phase (e.g. after criterion was reached in a previous session)
+- **Individual** — select from the individual list
+- **First rule** / **Background (Rule A)** / **Target stimulus (S+)** — counterbalancing settings pre-filled from `individuals.csv`, editable per run
+- **Start at phase** — resume an individual from a specific phase (e.g. after criterion was reached in a previous session)
 - **Trials / session** — 8 / 16 / 24 / 32
 
-#### subjects.csv
+#### individuals.csv
 
-On first launch, `subjects.csv` is created automatically next to the binary (or at the repo root when running via `touchscreen.sh`) with 10 pre-configured subjects and balanced counterbalancing. Scientists can open this file in any spreadsheet application to rename subjects, adjust counterbalancing, or add rows.
+On first launch, `individuals.csv` is created automatically next to the binary (or at the repo root when running via `touchscreen.sh`) with 10 pre-configured individuals and balanced counterbalancing. Scientists can open this file in any spreadsheet application to rename individuals, adjust counterbalancing, or add rows.
 
 ```
-subject_id, first_rule, bg_rule_a, target_stim, notes
+individual_id, first_rule, bg_rule_a, target_stim, notes
 S01, RuleA, lightgrey, black triangle,
 S02, RuleB, purple, white circle,
 ...
 ```
 
-Session logs are stored in `SessionLogs/Rule_Learning_<subject_id>/` so each subject's data is automatically separated.
+Session logs are stored in `SessionLogs/Rule_Learning_<individual_id>/` so each individual's data is automatically separated.

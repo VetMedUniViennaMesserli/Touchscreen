@@ -1,0 +1,11 @@
+individual_id,first_rule,bg_rule_a,target_stim,notes
+S01,RuleB,purple,black triangle,
+S02,RuleA,lightgrey,white triangle,
+S03,RuleA,purple,black circle,
+S04,RuleB,purple,white circle,
+S05,RuleA,lightgrey,black triangle,
+S06,RuleA,lightgrey,white circle,
+S07,RuleB,purple,white triangle,
+S08,RuleB,purple,black circle,
+S09,RuleB,lightgrey,black triangle,
+S10,RuleA,lightgrey,white triangle,
