@@ -62,10 +62,8 @@ command -v python3 >/dev/null 2>&1 || fail "python3 not found. Run: sudo apt-get
 
 # ── clone / update ────────────────────────────────────────────────────────────
 
-IS_UPDATE=false
 step "Repository"
 if [ -d "$INSTALL_DIR/.git" ]; then
-    IS_UPDATE=true
     echo "    Existing installation found — pulling latest changes"
     git -C "$INSTALL_DIR" pull --ff-only
 else
@@ -78,36 +76,31 @@ ok
 
 CONFIG_FILE="$INSTALL_DIR/.selected_app"
 
-if $IS_UPDATE && [ -f "$CONFIG_FILE" ]; then
-    echo ""
-    echo "[i] Update — keeping existing app selection: $(cat "$CONFIG_FILE")"
-else
-    step "Select training app"
-    echo "    Which training should run at startup?"
-    echo ""
-    echo "    1) Two images            (touchscreen)"
-    echo "    2) Two images            (keyboard)"
-    echo "    3) Go / No-Go"
-    echo "    4) Matching to sample"
-    echo "    5) Random position"
-    echo "    6) Sequential learning"
-    echo "    7) Rule learning"
-    echo ""
-    read -rp "    Enter number [7]: " choice
-    choice="${choice:-7}"
-    case "$choice" in
-        1) SELECTED="App/Trainings/two_images.py" ;;
-        2) SELECTED="App/Trainings/two_images_keyboard_input.py" ;;
-        3) SELECTED="App/Trainings/go_nogo.py" ;;
-        4) SELECTED="App/Trainings/matching_to_sample.py" ;;
-        5) SELECTED="App/Trainings/random_position.py" ;;
-        6) SELECTED="App/Trainings/sequential_learning.py" ;;
-        *) SELECTED="App/Trainings/rule_learning.py" ;;
-    esac
-    echo "$SELECTED" > "$CONFIG_FILE"
-    echo "    Selected: $SELECTED"
-    ok
-fi
+step "Select training app"
+echo "    Which training should run at startup?"
+echo ""
+echo "    1) Two images            (touchscreen)"
+echo "    2) Two images            (keyboard)"
+echo "    3) Go / No-Go"
+echo "    4) Matching to sample"
+echo "    5) Random position"
+echo "    6) Sequential learning"
+echo "    7) Rule learning"
+echo ""
+read -rp "    Enter number [7]: " choice
+choice="${choice:-7}"
+case "$choice" in
+    1) SELECTED="App/Trainings/two_images.py" ;;
+    2) SELECTED="App/Trainings/two_images_keyboard_input.py" ;;
+    3) SELECTED="App/Trainings/go_nogo.py" ;;
+    4) SELECTED="App/Trainings/matching_to_sample.py" ;;
+    5) SELECTED="App/Trainings/random_position.py" ;;
+    6) SELECTED="App/Trainings/sequential_learning.py" ;;
+    *) SELECTED="App/Trainings/rule_learning.py" ;;
+esac
+echo "$SELECTED" > "$CONFIG_FILE"
+echo "    Selected: $SELECTED"
+ok
 
 # ── python venv ───────────────────────────────────────────────────────────────
 
