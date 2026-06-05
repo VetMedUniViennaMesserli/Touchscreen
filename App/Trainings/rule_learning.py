@@ -681,7 +681,7 @@ class RuleLearningTraining(TrainingWindow):
             f"session={self._session_count}, trial={self._trial_idx}, "
             f"rule={tr['rule']}, trial_type={trial_type}, "
             f"correct_side={tgt}, choice={choice_side}, correct={correct}, "
-            f"latency={latency:.3f}, correction={self._correction}"
+            f"latency={latency:.2f}, correction={self._correction}"
         )
 
         if timeout:
