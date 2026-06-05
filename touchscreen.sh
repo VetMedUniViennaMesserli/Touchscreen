@@ -7,11 +7,13 @@
 ## finds where script is located
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 
-## define which app to run
-#APP="App/Trainings/random_position.py"
-#APP="App/Trainings/two_images.py"
-#APP="App/Trainings/two_images_keyboard_input.py"
-APP="App/Trainings/rule_learning.py"
+## read app selection written by install.sh; fall back to rule_learning
+CONFIG_FILE="$SCRIPT_DIR/.selected_app"
+if [ -f "$CONFIG_FILE" ]; then
+    APP="$(cat "$CONFIG_FILE")"
+else
+    APP="App/Trainings/rule_learning.py"
+fi
 
 ## execute python from virtual environment directly
 PYTHONPATH="$SCRIPT_DIR/App" "$SCRIPT_DIR"/venv/bin/python3 "$SCRIPT_DIR"/"$APP"
