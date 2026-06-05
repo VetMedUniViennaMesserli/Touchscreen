@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
-# Touchscreen learning tool — one-line installer
+# Touchscreen learning tool — installer / uninstaller
 # Usage:
 #   bash <(curl -sSL https://raw.githubusercontent.com/VetMedUniViennaMesserli/Touchscreen/main/install.sh)
-# To update an existing installation, run the same command again.
 
 set -euo pipefail
 
@@ -17,14 +16,48 @@ ok()   { echo "    ok"; }
 fail() { echo ""; echo "[!] $*" >&2; exit 1; }
 
 echo ""
-echo "Touchscreen learning tool — installer"
-echo "======================================"
+echo "Touchscreen learning tool"
+echo "========================="
 
-# ── checks ────────────────────────────────────────────────────────────────────
+# ── action ────────────────────────────────────────────────────────────────────
+
+echo ""
+echo "  1) Install / Update"
+echo "  2) Uninstall"
+echo ""
+read -rp "  Choose [1]: " action
+action="${action:-1}"
+
+# ── uninstall ─────────────────────────────────────────────────────────────────
+
+if [ "$action" = "2" ]; then
+    step "Stopping and disabling service"
+    systemctl --user stop    "$SERVICE.service" 2>/dev/null || true
+    systemctl --user disable "$SERVICE.service" 2>/dev/null || true
+    rm -f "$HOME/.config/systemd/user/$SERVICE.service"
+    systemctl --user daemon-reload 2>/dev/null || true
+    ok
+
+    step "Removing files"
+    if [ -d "$INSTALL_DIR" ]; then
+        rm -rf "$INSTALL_DIR"
+        echo "    Removed $INSTALL_DIR"
+    else
+        echo "    $INSTALL_DIR not found — nothing to remove"
+    fi
+    ok
+
+    echo ""
+    echo "Done. Touchscreen has been uninstalled."
+    echo ""
+    exit 0
+fi
+
+# ── checks (install / update only) ───────────────────────────────────────────
 
 [[ "$OSTYPE" == linux* ]] || fail "This installer targets Linux only."
 
-command -v git    >/dev/null 2>&1 || fail "git not found.    Run: sudo apt-get install git"
+command -v git     >/dev/null 2>&1 || fail "git not found.    Run: sudo apt-get install git"
 command -v python3 >/dev/null 2>&1 || fail "python3 not found. Run: sudo apt-get install python3"
 
 # ── clone / update ────────────────────────────────────────────────────────────
@@ -41,7 +74,7 @@ else
 fi
 ok
 
-# ── app selection ────────────────────────────────────────────────────────────
+# ── app selection ─────────────────────────────────────────────────────────────
 
 CONFIG_FILE="$INSTALL_DIR/.selected_app"
 

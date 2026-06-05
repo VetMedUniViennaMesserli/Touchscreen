@@ -2,7 +2,7 @@
 
 A touchscreen-based cognitive training system built with PySide6/Qt. Designed for deployment on a Raspberry Pi.
 
-## Quick install (Linux)
+## Quick install / uninstall (Linux)
 
 Clones the repo, sets up the virtual environment, and enables the systemd autostart service in one command:
 
@@ -10,7 +10,7 @@ Clones the repo, sets up the virtual environment, and enables the systemd autost
 bash <(curl -sSL https://raw.githubusercontent.com/VetMedUniViennaMesserli/Touchscreen/main/install.sh)
 ```
 
-Run the same command again to update an existing installation.
+The script asks whether to **Install / Update** or **Uninstall** each time it runs. Run the same command again to update or to remove the installation completely.
 
 ## Running
 
@@ -21,13 +21,13 @@ cd ~/Touchscreen
 ./touchscreen.sh
 ```
 
-The script activates the virtual environment and starts whichever training is configured inside it. To change the active training, open `touchscreen.sh` and update the `APP=` line to point to a different training file, for example:
+The script reads the active training from `.selected_app` (written by the installer). To change it without re-running the installer, edit that file directly:
 
 ```bash
-APP="App/Trainings/rule_learning.py"
+echo "App/Trainings/rule_learning.py" > ~/Touchscreen/.selected_app
 ```
 
-To run a specific training directly without editing the script:
+To run a specific training directly without changing the configuration:
 
 ```bash
 cd ~/Touchscreen
@@ -64,12 +64,6 @@ systemctl --user start touchscreen.service
 > [!TIP]
 > On Raspberry Pi, enable the "overlay filesystem" option to prevent SD card corruption.
 > Session logs are written to `~/Touchscreen/SessionLogs/`. Collect them via network or USB stick.
-
-To stop the service from starting automatically:
-
-```bash
-systemctl --user disable touchscreen.service
-```
 
 ## Building executables (optional)
 
