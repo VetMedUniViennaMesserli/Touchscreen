@@ -5,7 +5,8 @@ After=graphical-session.target
 
 [Service]
 Type=exec
-Restart=no
+Restart=always
+RestartSec=1
 WorkingDirectory=%h/Touchscreen
 ExecStart=%h/Touchscreen/touchscreen.sh
 
