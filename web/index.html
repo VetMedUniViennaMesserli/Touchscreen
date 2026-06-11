@@ -1,0 +1,1016 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Rule Learning</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      width: 100%; height: 100%;
+      font-family: system-ui, sans-serif;
+      background: #000;
+      color: #fff;
+      overflow: hidden;
+      touch-action: manipulation;
+    }
+
+    /* ── Screen management ─────────────────────────────────────────── */
+    .screen {
+      display: none;
+      width: 100vw; height: 100vh;
+      position: absolute; top: 0; left: 0;
+    }
+    @supports (height: 100dvh) { .screen { height: 100dvh; } }
+    .screen.active { display: flex; }
+
+    /* ── Individual selection ──────────────────────────────────────── */
+    #screen-individuals {
+      flex-direction: column;
+      background: #1a1a1a;
+      padding: 28px 32px;
+      gap: 16px;
+    }
+    .page-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .page-header h1 { font-size: 26px; font-weight: bold; }
+    #ind-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      flex: 1;
+      align-content: start;
+      overflow-y: auto;
+    }
+    .ind-btn {
+      height: 80px;
+      font-size: 20px;
+      font-weight: bold;
+      background: #2a2a2a;
+      border: 2px solid #555;
+      border-radius: 8px;
+      color: #fff;
+      cursor: pointer;
+    }
+    .ind-btn:active { background: #444; }
+    #edit-ind-btn {
+      align-self: center;
+      padding: 10px 20px;
+      font-size: 14px;
+      background: transparent;
+      border: 1px solid #444;
+      border-radius: 6px;
+      color: #888;
+      cursor: pointer;
+    }
+    #edit-ind-btn:hover { color: #fff; border-color: #888; }
+
+    /* ── Edit individuals modal ────────────────────────────────────── */
+    #modal-edit {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.88);
+      z-index: 200;
+      display: none;
+      align-items: center;
+      justify-content: center;
+    }
+    #modal-edit.open { display: flex; }
+    #modal-inner {
+      background: #222;
+      border-radius: 12px;
+      padding: 24px;
+      width: min(620px, 96vw);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    #modal-inner h2 { font-size: 18px; }
+    #modal-inner p  { font-size: 13px; color: #888; }
+    #ind-csv-edit {
+      width: 100%; height: 240px;
+      background: #111;
+      border: 1px solid #444;
+      border-radius: 6px;
+      color: #fff;
+      font-family: monospace;
+      font-size: 13px;
+      padding: 8px;
+      resize: vertical;
+    }
+    .modal-row { display: flex; gap: 10px; justify-content: flex-end; }
+    .modal-row button {
+      padding: 10px 24px; font-size: 15px;
+      border: none; border-radius: 6px; cursor: pointer;
+    }
+    #modal-save   { background: #1a7a4a; color: #fff; }
+    #modal-cancel { background: #444;    color: #fff; }
+
+    /* ── Setup page ────────────────────────────────────────────────── */
+    #screen-setup {
+      flex-direction: column;
+      background: #1a1a1a;
+      padding: 20px 28px 24px;
+      overflow-y: auto;
+      gap: 12px;
+    }
+    #setup-header { display: flex; align-items: center; gap: 14px; }
+    #setup-title  { font-size: 20px; font-weight: bold; flex: 1; }
+    .group-box {
+      border: 1px solid #3a3a3a;
+      border-radius: 8px;
+      padding: 10px 14px 14px;
+    }
+    .group-label {
+      font-size: 12px;
+      color: #888;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 10px;
+    }
+    .form-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+    }
+    .form-row:last-child { margin-bottom: 0; }
+    .form-label {
+      min-width: 170px;
+      font-size: 14px;
+      color: #bbb;
+    }
+    .toggle-group { display: flex; flex-wrap: wrap; gap: 6px; }
+    .tgl {
+      padding: 8px 14px;
+      height: 46px;
+      font-size: 14px;
+      background: #2a2a2a;
+      border: 2px solid #444;
+      border-radius: 6px;
+      color: #aaa;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.08s;
+    }
+    .tgl.on {
+      background: #1a7a4a;
+      border-color: #1a7a4a;
+      color: #fff;
+      font-weight: 600;
+    }
+    .stepper { display: flex; align-items: center; }
+    .stepper button {
+      width: 46px; height: 46px;
+      font-size: 22px;
+      background: #2a2a2a;
+      border: 2px solid #444;
+      border-radius: 6px;
+      color: #fff;
+      cursor: pointer;
+    }
+    .stepper button:disabled { opacity: 0.25; cursor: default; }
+    .stepper span {
+      min-width: 60px;
+      text-align: center;
+      font-size: 17px;
+    }
+    #start-btn {
+      width: 100%;
+      height: 70px;
+      font-size: 20px;
+      font-weight: bold;
+      background: #1a7a4a;
+      border: none;
+      border-radius: 8px;
+      color: #fff;
+      cursor: pointer;
+    }
+    #start-btn:active { background: #1faa64; }
+    .back-btn {
+      padding: 10px 18px;
+      font-size: 14px;
+      background: #2a2a2a;
+      border: 1px solid #444;
+      border-radius: 6px;
+      color: #aaa;
+      cursor: pointer;
+    }
+
+    /* ── Task screen ───────────────────────────────────────────────── */
+    #screen-task {
+      align-items: center;
+      justify-content: center;
+      gap: 8vw;
+    }
+    .shape-btn {
+      width:  min(280px, 38vw);
+      height: min(280px, 38vw);
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      border-radius: 8px;
+      padding: 0;
+    }
+    .shape-btn svg { width: 100%; height: 100%; display: block; }
+    .shape-btn.hidden { visibility: hidden; pointer-events: none; }
+
+    /* ── Session-end screen ────────────────────────────────────────── */
+    #screen-end {
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: #000;
+      gap: 40px;
+      padding: 32px;
+      text-align: center;
+    }
+    #end-msg {
+      font-size: clamp(18px, 3vw, 26px);
+      white-space: pre-line;
+      line-height: 1.6;
+    }
+    #end-btns { display: flex; gap: 20px; flex-wrap: wrap; justify-content: center; }
+    #end-btns button {
+      padding: 18px 36px;
+      font-size: 18px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      min-width: 160px;
+    }
+    #btn-continue { background: #1a7a4a; color: #fff; }
+    #btn-exit     { background: #7a1a1a; color: #fff; }
+    #btn-dl       { background: #1a3a7a; color: #fff; font-size: 15px; padding: 14px 24px; }
+  </style>
+</head>
+<body>
+
+<!-- ── Individual selection ──────────────────────────────────────── -->
+<div id="screen-individuals" class="screen active">
+  <div class="page-header">
+    <h1>Rule Learning</h1>
+  </div>
+  <div id="ind-grid"></div>
+  <button id="edit-ind-btn">⚙ Edit individuals</button>
+</div>
+
+<!-- ── Edit individuals modal ────────────────────────────────────── -->
+<div id="modal-edit">
+  <div id="modal-inner">
+    <h2>Edit individuals</h2>
+    <p>Columns: individual_id, first_rule, bg_rule_a, target_stim, transfer_stim, notes</p>
+    <textarea id="ind-csv-edit" spellcheck="false"></textarea>
+    <div class="modal-row">
+      <button id="modal-cancel">Cancel</button>
+      <button id="modal-save">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Session setup ─────────────────────────────────────────────── -->
+<div id="screen-setup" class="screen">
+  <div id="setup-header">
+    <button class="back-btn" id="btn-back">← Back</button>
+    <div id="setup-title"></div>
+  </div>
+
+  <div class="group-box">
+    <div class="group-label">Counterbalancing</div>
+    <div class="form-row">
+      <span class="form-label">First rule:</span>
+      <div class="toggle-group" id="tg-first-rule">
+        <button class="tgl" data-v="RuleA">RuleA</button>
+        <button class="tgl" data-v="RuleB">RuleB</button>
+      </div>
+    </div>
+    <div class="form-row">
+      <span class="form-label">Background (Rule A):</span>
+      <div class="toggle-group" id="tg-bg-a">
+        <button class="tgl" data-v="lightgrey">lightgrey</button>
+        <button class="tgl" data-v="striped">striped</button>
+      </div>
+    </div>
+    <div class="form-row">
+      <span class="form-label">Target stimulus (S+):</span>
+      <div class="toggle-group" id="tg-target">
+        <button class="tgl" data-v="black triangle">black triangle</button>
+        <button class="tgl" data-v="white triangle">white triangle</button>
+        <button class="tgl" data-v="black circle">black circle</button>
+        <button class="tgl" data-v="white circle">white circle</button>
+      </div>
+    </div>
+    <div class="form-row">
+      <span class="form-label">Transfer target (S+):</span>
+      <div class="toggle-group" id="tg-transfer">
+        <button class="tgl" data-v="blue star">blue star</button>
+        <button class="tgl" data-v="yellow square">yellow square</button>
+        <button class="tgl" data-v="blue square">blue square</button>
+        <button class="tgl" data-v="yellow star">yellow star</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="group-box">
+    <div class="group-label">Session</div>
+    <div class="form-row">
+      <span class="form-label">Start at phase:</span>
+      <div class="toggle-group" id="tg-start-at"></div>
+    </div>
+    <div class="form-row">
+      <span class="form-label">Trials / session:</span>
+      <div class="stepper">
+        <button id="step-minus">−</button>
+        <span id="step-val">24</span>
+        <button id="step-plus">+</button>
+      </div>
+    </div>
+  </div>
+
+  <button id="start-btn">▶  Start</button>
+</div>
+
+<!-- ── Task screen ───────────────────────────────────────────────── -->
+<div id="screen-task" class="screen">
+  <button class="shape-btn" id="btn-left">
+    <svg id="svg-left" viewBox="0 0 100 100"></svg>
+  </button>
+  <button class="shape-btn" id="btn-right">
+    <svg id="svg-right" viewBox="0 0 100 100"></svg>
+  </button>
+</div>
+
+<!-- ── Session-end screen ────────────────────────────────────────── -->
+<div id="screen-end" class="screen">
+  <div id="end-msg"></div>
+  <div id="end-btns">
+    <button id="btn-continue">Continue</button>
+    <button id="btn-dl">⬇ Download CSV</button>
+    <button id="btn-exit">Exit</button>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+// ─── Constants ───────────────────────────────────────────────────
+
+const TIMEOUT_MS         = 180_000;
+const MAX_CORR           = 5;
+const ER_REPS            = 2;
+const FEEDBACK_MS        = 800;
+const ITI_CORRECT_MS     = 200;
+const PRETRAIN_TRIALS    = 12;
+const PRETRAIN_CRITERION = 10;
+const PRETRAIN_CONSEC    = 2;
+
+const OPPOSITE = {
+  black:'white', white:'black', blue:'yellow', yellow:'blue',
+  triangle:'circle', circle:'triangle', star:'square', square:'star',
+};
+
+const SHAPE_FILL = {
+  black:'#111', white:'#fff', yellow:'#ffd200', blue:'#1e50c8',
+};
+
+const BG_CSS = {
+  lightgrey: '#b4b4b4',
+  striped:   'repeating-linear-gradient(45deg,#505050 0px,#505050 24px,#a0a0a0 24px,#a0a0a0 48px)',
+  black:     '#000',
+};
+
+const WRONG_BG   = '#c80000';
+const TIMEOUT_BG = '#dcb800';
+const SUCCESS_HZ = 600;
+const FAILURE_HZ = 200;
+const TRIAL_OPTIONS = [8, 16, 24, 32];
+
+// ─── Audio ───────────────────────────────────────────────────────
+
+let _audioCtx = null;
+function getAudio() {
+  if (!_audioCtx) _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (_audioCtx.state === 'suspended') _audioCtx.resume();
+  return _audioCtx;
+}
+function playTone(freq, dur = 0.35) {
+  try {
+    const ctx = getAudio();
+    const osc = ctx.createOscillator();
+    const g   = ctx.createGain();
+    osc.type = 'sine'; osc.frequency.value = freq;
+    osc.connect(g); g.connect(ctx.destination);
+    g.gain.setValueAtTime(0.5, ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + dur);
+    osc.start(); osc.stop(ctx.currentTime + dur);
+  } catch(e) {}
+}
+
+// ─── Shape rendering ─────────────────────────────────────────────
+
+const SVG_NS = 'http://www.w3.org/2000/svg';
+
+function svgEl(tag, attrs) {
+  const el = document.createElementNS(SVG_NS, tag);
+  for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, v);
+  return el;
+}
+
+function renderShape(svgElem, shape, color, visible) {
+  svgElem.innerHTML = '';
+  if (!visible) return;
+
+  const fill = SHAPE_FILL[color] ?? '#888';
+  const common = { fill, stroke: '#000', 'stroke-width': 3 };
+
+  if (shape === 'circle') {
+    svgElem.appendChild(svgEl('circle', { cx:50, cy:50, r:40, ...common }));
+
+  } else if (shape === 'square') {
+    svgElem.appendChild(svgEl('rect', { x:10, y:10, width:80, height:80, ...common }));
+
+  } else if (shape === 'triangle') {
+    svgElem.appendChild(svgEl('polygon', { points:'50,10 90,90 10,90', ...common }));
+
+  } else if (shape === 'star') {
+    const pts = Array.from({length:10}, (_,i) => {
+      const r = i%2===0 ? 42 : 16;
+      const a = Math.PI*i/5 - Math.PI/2;
+      return `${50+r*Math.cos(a)},${50+r*Math.sin(a)}`;
+    }).join(' ');
+    svgElem.appendChild(svgEl('polygon', { points: pts, ...common }));
+
+  } else if (shape === 'cross') {
+    const g = svgEl('g', {});
+    for (const [x,y,w,h] of [[36,10,28,80],[10,36,80,28]]) {
+      g.appendChild(svgEl('rect', { x,y,width:w,height:h, ...common }));
+    }
+    svgElem.appendChild(g);
+  }
+}
+
+// ─── Individuals (localStorage) ──────────────────────────────────
+
+const DEFAULT_INDIVIDUALS = `individual_id,first_rule,bg_rule_a,target_stim,transfer_stim,notes
+S01,RuleA,lightgrey,black triangle,blue star,
+S02,RuleB,striped,white triangle,yellow square,
+S03,RuleA,striped,black circle,blue star,
+S04,RuleB,striped,white circle,yellow square,
+S05,RuleA,lightgrey,black triangle,blue star,
+S06,RuleA,lightgrey,white circle,yellow square,
+S07,RuleB,striped,white triangle,blue star,
+S08,RuleB,striped,black circle,yellow square,
+S09,RuleB,lightgrey,black triangle,blue star,
+S10,RuleA,lightgrey,white triangle,yellow square,`;
+
+function getRawCsv()         { return localStorage.getItem('rl_individuals') ?? DEFAULT_INDIVIDUALS; }
+function saveRawCsv(raw)     { localStorage.setItem('rl_individuals', raw); }
+
+function parseCsv(text) {
+  const lines = text.trim().split('\n').filter(l => l.trim());
+  if (lines.length < 2) return [];
+  const hdrs = lines[0].split(',').map(h => h.trim());
+  return lines.slice(1).map(line => {
+    const vals = line.split(',').map(v => v.trim());
+    return Object.fromEntries(hdrs.map((h, i) => [h, vals[i] ?? '']));
+  });
+}
+
+// ─── Trial builders ───────────────────────────────────────────────
+
+function even(n) { return n%2===0 ? n : n-1; }
+
+function shuffle(arr) {
+  for (let i = arr.length-1; i > 0; i--) {
+    const j = 0|Math.random()*(i+1);
+    [arr[i],arr[j]] = [arr[j],arr[i]];
+  }
+  return arr;
+}
+
+function buildRuleA(n, tS, oS, tC, oC) {
+  n = even(n);
+  const sides  = shuffle([...Array(n/2).fill('left'),  ...Array(n/2).fill('right')]);
+  const shapes = shuffle([...Array(n/2).fill(tS), ...Array(n/2).fill(oS)]);
+  return sides.map((cs, i) => {
+    const ts = shapes[i], os = ts===tS ? oS : tS;
+    const [ls,rs,lc,rc] = cs==='left' ? [ts,os,tC,oC] : [os,ts,oC,tC];
+    return { rule:'RuleA', leftShape:ls, leftColor:lc, rightShape:rs, rightColor:rc, correctSide:cs };
+  });
+}
+
+function buildRuleB(n, tS, oS, tC, oC) {
+  n = even(n);
+  const sides  = shuffle([...Array(n/2).fill('left'),  ...Array(n/2).fill('right')]);
+  const colors = shuffle([...Array(n/2).fill(tC), ...Array(n/2).fill(oC)]);
+  return sides.map((cs, i) => {
+    const tc = colors[i], oc = tc===tC ? oC : tC;
+    const [ls,rs,lc,rc] = cs==='left' ? [tS,oS,tc,oc] : [oS,tS,oc,tc];
+    return { rule:'RuleB', leftShape:ls, leftColor:lc, rightShape:rs, rightColor:rc, correctSide:cs };
+  });
+}
+
+function noRepeat(t) {
+  t = [...t];
+  for (let a=0; a<1000; a++) {
+    if (t.every((r,i) => i===0 || !(r.leftShape===t[i-1].leftShape && r.leftColor===t[i-1].leftColor &&
+        r.rightShape===t[i-1].rightShape && r.rightColor===t[i-1].rightColor))) return t;
+    shuffle(t);
+  }
+  return t;
+}
+
+function maxSideStreak(t, max=2) {
+  t = [...t];
+  for (let a=0; a<1000; a++) {
+    let s=1, ok=true;
+    for (let i=1; i<t.length; i++) {
+      if (t[i].correctSide===t[i-1].correctSide) { if (++s>max) { ok=false; break; } }
+      else s=1;
+    }
+    if (ok) return t; shuffle(t);
+  }
+  return t;
+}
+
+function maxRuleStreak(t, max=3) {
+  t = [...t];
+  for (let a=0; a<1000; a++) {
+    let s=1, ok=true;
+    for (let i=1; i<t.length; i++) {
+      if (t[i].rule===t[i-1].rule) { if (++s>max) { ok=false; break; } }
+      else s=1;
+    }
+    if (ok) return t; shuffle(t);
+  }
+  return t;
+}
+
+function moveType1First(trials, tS, tC) {
+  const i = trials.findIndex(t =>
+    (t.leftShape===tS && t.leftColor===tC) || (t.rightShape===tS && t.rightColor===tC));
+  if (i > 0) [trials[0],trials[i]] = [trials[i],trials[0]];
+  return trials;
+}
+
+function buildAlternate(n, tS, oS, tC, oC, start) {
+  n = even(n); const h = n/2;
+  const a = buildRuleA(h, tS, oS, tC, oC);
+  const b = buildRuleB(h, tS, oS, tC, oC);
+  let t = start==='RuleA' ? [...a,...b] : [...b,...a];
+  return maxSideStreak(noRepeat(t), 2);
+}
+
+function buildMixed(n, tS, oS, tC, oC) {
+  n = even(n); const h = n/2;
+  return maxRuleStreak(shuffle([...buildRuleA(h,tS,oS,tC,oC),...buildRuleB(h,tS,oS,tC,oC)]), 3);
+}
+
+function buildPretrain(n) {
+  n = even(n);
+  const sides = shuffle([...Array(n/2).fill('left'),...Array(n/2).fill('right')]);
+  return maxSideStreak(sides.map(cs => ({
+    rule:'PreTraining', correctSide:cs,
+    leftShape:'cross', leftColor:'white', rightShape:'cross', rightColor:'white',
+  })), 2);
+}
+
+function buildPhase(phase, n, tS, oS, tC, oC, firstRule, xS, xoS, xC, xoC) {
+  if (phase==='RuleA')               return buildRuleA(n, tS, oS, tC, oC);
+  if (phase==='RuleB')               return buildRuleB(n, tS, oS, tC, oC);
+  if (phase==='Alternate')           return buildAlternate(n, tS, oS, tC, oC, firstRule);
+  if (phase==='Mixed')               return buildMixed(n, tS, oS, tC, oC);
+  if (phase==='AlternatingTransfer') return buildAlternate(n, xS, xoS, xC, xoC, firstRule);
+  if (phase==='MixedTransfer')       return buildMixed(n, xS, xoS, xC, xoC);
+  return [];
+}
+
+// ─── CSV log ──────────────────────────────────────────────────────
+
+const CSV_COLS = [
+  'subjectID','date','time','phase','phase_count','session_count',
+  'trial_count','target_color','target_shape','bg_shown','rule',
+  'left_shape','left_color','right_shape','right_color',
+  'commonSp','left_stim','right_stim','trial_type',
+  'target_side','choice_side','reward_score',
+  'choice_shape','choice_color','choice_latency','correction_trial',
+];
+
+function padZ(n) { return String(n).padStart(2,'0'); }
+function fmtDate(d) { return `${d.getFullYear()}-${padZ(d.getMonth()+1)}-${padZ(d.getDate())}`; }
+function fmtTimeDash(d)  { return `${padZ(d.getHours())}-${padZ(d.getMinutes())}-${padZ(d.getSeconds())}`; }
+function fmtTimeColon(d) { return `${padZ(d.getHours())}:${padZ(d.getMinutes())}:${padZ(d.getSeconds())}`; }
+
+class CsvLog {
+  constructor(id) {
+    const now = new Date();
+    this.filename = `Rule_Learning_${id}_${fmtDate(now)}_${fmtTimeDash(now)}.csv`;
+    this.rows = [CSV_COLS.join(',')];
+  }
+  write(data) {
+    this.rows.push(CSV_COLS.map(c => String(data[c] ?? '').replace(/,/g,'；')).join(','));
+  }
+  download() {
+    const blob = new Blob([this.rows.join('\r\n')], { type:'text/csv' });
+    const a = Object.assign(document.createElement('a'), {
+      href: URL.createObjectURL(blob), download: this.filename
+    });
+    a.click(); URL.revokeObjectURL(a.href);
+  }
+}
+
+// ─── Setup page ───────────────────────────────────────────────────
+
+let _individual = null;
+let _trialsIdx  = TRIAL_OPTIONS.indexOf(24);
+
+function tglSet(groupId, value) {
+  document.querySelectorAll(`#${groupId} .tgl`).forEach(b =>
+    b.classList.toggle('on', b.dataset.v === value));
+}
+function tglGet(groupId) {
+  return document.querySelector(`#${groupId} .tgl.on`)?.dataset.v ?? null;
+}
+function tglBind(groupId, onChange) {
+  document.getElementById(groupId).addEventListener('click', e => {
+    const b = e.target.closest('.tgl'); if (!b) return;
+    tglSet(groupId, b.dataset.v);
+    onChange?.(b.dataset.v);
+  });
+}
+
+function buildStartAtOpts(firstRule) {
+  const seq = firstRule==='RuleA' ? ['RuleA','RuleB'] : ['RuleB','RuleA'];
+  return ['Beginning','PreTraining',...seq,'Alternate','Mixed','AlternatingTransfer','MixedTransfer'];
+}
+
+function refreshStartAt(firstRule) {
+  const cur = tglGet('tg-start-at');
+  const opts = buildStartAtOpts(firstRule);
+  const tg = document.getElementById('tg-start-at');
+  tg.innerHTML = '';
+  opts.forEach(o => {
+    const b = document.createElement('button');
+    b.className = 'tgl' + (o===(cur ?? 'Beginning') ? ' on' : '');
+    b.dataset.v = o; b.textContent = o;
+    b.addEventListener('click', () => tglSet('tg-start-at', o));
+    tg.appendChild(b);
+  });
+  if (!document.querySelector('#tg-start-at .tgl.on'))
+    document.querySelector('#tg-start-at .tgl')?.classList.add('on');
+}
+
+function refreshStepper() {
+  document.getElementById('step-val').textContent = TRIAL_OPTIONS[_trialsIdx];
+  document.getElementById('step-minus').disabled = _trialsIdx === 0;
+  document.getElementById('step-plus').disabled  = _trialsIdx === TRIAL_OPTIONS.length-1;
+}
+
+function fillSetup(ind) {
+  document.getElementById('setup-title').textContent = `Individual: ${ind.individual_id}`;
+  const fr = ind.first_rule || 'RuleA';
+  tglSet('tg-first-rule', fr);
+  tglSet('tg-bg-a', ind.bg_rule_a==='purple' ? 'striped' : (ind.bg_rule_a || 'lightgrey'));
+  tglSet('tg-target',   ind.target_stim   || 'black triangle');
+  tglSet('tg-transfer', ind.transfer_stim || 'blue star');
+  refreshStartAt(fr);
+  refreshStepper();
+}
+
+function buildSettings() {
+  const firstRule = tglGet('tg-first-rule') || 'RuleA';
+  const bgA       = tglGet('tg-bg-a')       || 'lightgrey';
+  const tgt       = (tglGet('tg-target')    || 'black triangle').split(' ');
+  const xfr       = (tglGet('tg-transfer')  || 'blue star').split(' ');
+  const [tC,tS]   = tgt, [xC,xS] = xfr;
+  const bgB       = bgA==='lightgrey' ? 'striped' : 'lightgrey';
+
+  const allPhases = ['PreTraining',
+    ...(firstRule==='RuleA' ? ['RuleA','RuleB'] : ['RuleB','RuleA']),
+    'Alternate','Mixed','AlternatingTransfer','MixedTransfer'];
+  const startAt = tglGet('tg-start-at') || 'Beginning';
+  const phases  = (startAt==='Beginning' || startAt==='PreTraining' || !allPhases.includes(startAt))
+    ? allPhases : allPhases.slice(allPhases.indexOf(startAt));
+
+  return {
+    individualId: _individual.individual_id,
+    firstRule, bgA, bgB,
+    ruleBg: { RuleA:bgA, RuleB:bgB },
+    tgtColor:tC, tgtShape:tS, othColor:OPPOSITE[tC], othShape:OPPOSITE[tS],
+    xfrTgtColor:xC, xfrTgtShape:xS, xfrOthColor:OPPOSITE[xC], xfrOthShape:OPPOSITE[xS],
+    phases, nTrials: TRIAL_OPTIONS[_trialsIdx],
+  };
+}
+
+// ─── App state ────────────────────────────────────────────────────
+
+let _s       = null;   // settings
+let _csv     = null;
+
+let _phaseIdx          = 0;
+let _phaseSessionCount = 0;
+let _preConsec         = 0;
+let _trials            = [];
+let _trialIdx          = 0;
+let _trialCount        = 0;
+let _correction        = 0;
+let _correctT1         = 0;
+let _correctT2         = 0;
+let _preCorrect        = 0;
+let _current           = null;
+let _erTrials          = [];
+let _erIdx             = 0;
+let _inER              = false;
+let _respStart         = 0;
+let _toTimer           = null;
+let _accepting         = false;  // true only while waiting for a response
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function setTaskBg(name) {
+  document.getElementById('screen-task').style.background = BG_CSS[name] ?? '#000';
+}
+
+// ─── Phase / session ──────────────────────────────────────────────
+
+function curPhase() { return _s.phases[_phaseIdx] ?? null; }
+function isXfr(p)   { return (p ?? curPhase() ?? '').includes('Transfer'); }
+
+function curStimuli() {
+  return isXfr()
+    ? [_s.xfrTgtShape, _s.xfrOthShape, _s.xfrTgtColor, _s.xfrOthColor]
+    : [_s.tgtShape, _s.othShape, _s.tgtColor, _s.othColor];
+}
+
+function startSession() {
+  _s   = buildSettings();
+  _csv = new CsvLog(_s.individualId);
+  _phaseIdx = 0; _phaseSessionCount = 0; _preConsec = 0;
+  beginPhase();
+}
+
+function beginPhase() {
+  const phase = curPhase();
+  if (!phase) { endExperiment(); return; }
+
+  _phaseSessionCount++;
+  _trialIdx=0; _trialCount=0; _correction=0;
+  _correctT1=0; _correctT2=0; _preCorrect=0;
+
+  if (phase==='PreTraining') {
+    _trials=buildPretrain(PRETRAIN_TRIALS); _inER=false; _erTrials=[];
+  } else {
+    const [tS,oS,tC,oC] = curStimuli();
+    _trials = buildPhase(phase, _s.nTrials, tS, oS, tC, oC, _s.firstRule,
+      _s.xfrTgtShape, _s.xfrOthShape, _s.xfrTgtColor, _s.xfrOthColor);
+    if (['Alternate','AlternatingTransfer','Mixed','MixedTransfer'].includes(phase))
+      moveType1First(_trials, curStimuli()[0], curStimuli()[2]);
+    _inER=true;
+    _erTrials=shuffle([...Array(ER_REPS).fill('left'),...Array(ER_REPS).fill('right')])
+               .map(cs => ({correctSide:cs}));
+  }
+  _erIdx=0;
+  showScreen('screen-task');
+  nextTrial();
+}
+
+function nextTrial() {
+  if (_inER) {
+    if (_erIdx < _erTrials.length) { showER(); return; }
+    _inER=false;
+  }
+  if (_trialIdx >= _trials.length) { evaluateSession(); return; }
+  _current=_trials[_trialIdx]; _correction=0; _trialCount++;
+  showTrial();
+}
+
+function showER() {
+  const er=_erTrials[_erIdx], cs=er.correctSide, phase=curPhase();
+  let bgName, tS, tC;
+  if (isXfr(phase)) { bgName='black'; tS=_s.xfrTgtShape; tC=_s.xfrTgtColor; }
+  else {
+    const fr=_trials[0]?.rule??'RuleA'; bgName=_s.ruleBg[fr]; tS=_s.tgtShape; tC=_s.tgtColor;
+  }
+  setTaskBg(bgName);
+  renderShape(document.getElementById('svg-left'),  tS, tC, cs==='left');
+  renderShape(document.getElementById('svg-right'), tS, tC, cs==='right');
+  document.getElementById('btn-left').classList.toggle('hidden',  cs!=='left');
+  document.getElementById('btn-right').classList.toggle('hidden', cs!=='right');
+  _current = { rule:(_trials[0]?.rule??'RuleA'), correctSide:cs, trialType:0,
+    leftShape:cs==='left'?tS:null, leftColor:cs==='left'?tC:null,
+    rightShape:cs==='right'?tS:null, rightColor:cs==='right'?tC:null };
+  _correction=0;
+  startTimer();
+}
+
+function showTrial() {
+  const tr=_current, phase=curPhase();
+  if (phase==='PreTraining') {
+    setTaskBg('black');
+    const cs=tr.correctSide;
+    renderShape(document.getElementById('svg-left'),  'cross','white', cs==='left');
+    renderShape(document.getElementById('svg-right'), 'cross','white', cs==='right');
+    document.getElementById('btn-left').classList.toggle('hidden',  cs!=='left');
+    document.getElementById('btn-right').classList.toggle('hidden', cs!=='right');
+  } else {
+    setTaskBg(_s.ruleBg[tr.rule]);
+    renderShape(document.getElementById('svg-left'),  tr.leftShape,  tr.leftColor,  true);
+    renderShape(document.getElementById('svg-right'), tr.rightShape, tr.rightColor, true);
+    document.getElementById('btn-left').classList.remove('hidden');
+    document.getElementById('btn-right').classList.remove('hidden');
+  }
+  startTimer();
+}
+
+function startTimer() {
+  clearTimeout(_toTimer);
+  _respStart = performance.now();
+  _accepting = true;
+  _toTimer = setTimeout(() => respond(null,null,null), TIMEOUT_MS);
+}
+
+// ─── Response ─────────────────────────────────────────────────────
+
+function respond(side, shape, color) {
+  if (!_accepting) return;
+  _accepting = false;
+  clearTimeout(_toTimer); _toTimer=null;
+
+  const tr=_current, tgt=tr.correctSide;
+  const timeout=side===null, correct=!timeout&&side===tgt;
+  const latency=((performance.now()-_respStart)/1000).toFixed(3);
+  const phase=curPhase();
+
+  // Trial type
+  let trialType=0;
+  if (!_inER && tr.trialType!==0) {
+    const [tS,,tC]=curStimuli();
+    const [ps,pc]=tgt==='left'?[tr.leftShape,tr.leftColor]:[tr.rightShape,tr.rightColor];
+    trialType=(ps===tS&&pc===tC)?1:2;
+  }
+
+  // Score
+  if (!_inER && _correction===0) {
+    if (phase==='PreTraining') { if(correct) _preCorrect++; }
+    else if (correct) { if(trialType===1)_correctT1++;else _correctT2++; }
+  }
+
+  // Log
+  if (!_inER) {
+    const [tS,,tC]=curStimuli();
+    const bgKey=phase==='PreTraining'?'black':(_s.ruleBg[tr.rule]??'lightgrey');
+    const now=new Date();
+    _csv.write({
+      subjectID:_s.individualId, date:fmtDate(now), time:fmtTimeColon(now),
+      phase, phase_count:_phaseIdx+1, session_count:_phaseSessionCount,
+      trial_count:_trialCount, target_color:_s.tgtColor, target_shape:_s.tgtShape,
+      bg_shown: bgKey==='lightgrey'?'grey':bgKey,
+      rule:tr.rule??'',
+      left_shape:tr.leftShape??'none', left_color:tr.leftColor??'none',
+      right_shape:tr.rightShape??'none', right_color:tr.rightColor??'none',
+      commonSp:`${tC} ${tS}`,
+      left_stim:`${tr.leftColor??'none'} ${tr.leftShape??'none'}`,
+      right_stim:`${tr.rightColor??'none'} ${tr.rightShape??'none'}`,
+      trial_type:trialType, target_side:tgt,
+      choice_side:side??'NA', reward_score:correct?1:0,
+      choice_shape:shape??'NA', choice_color:color??'NA',
+      choice_latency:latency, correction_trial:_correction,
+    });
+  }
+
+  // Feedback
+  if (timeout) {
+    playTone(FAILURE_HZ);
+    document.getElementById('screen-task').style.background = TIMEOUT_BG;
+    _correction++;
+    setTimeout(_inER?showER:showTrial, FEEDBACK_MS);
+  } else if (correct) {
+    playTone(SUCCESS_HZ);
+    setTimeout(advance, ITI_CORRECT_MS);
+  } else {
+    playTone(FAILURE_HZ);
+    document.getElementById('screen-task').style.background = WRONG_BG;
+    if (_correction < MAX_CORR-1) { _correction++; setTimeout(_inER?showER:showTrial, FEEDBACK_MS); }
+    else setTimeout(advance, FEEDBACK_MS);
+  }
+}
+
+function advance() { if(_inER)_erIdx++;else _trialIdx++; nextTrial(); }
+
+// ─── Session end ──────────────────────────────────────────────────
+
+function evaluateSession() {
+  const phase=curPhase();
+  let met,advance_,total,n;
+  if (phase==='PreTraining') {
+    met=_preCorrect>=PRETRAIN_CRITERION;
+    if(met)_preConsec++;else _preConsec=0;
+    advance_=_preConsec>=PRETRAIN_CONSEC; total=_preCorrect; n=PRETRAIN_TRIALS;
+  } else {
+    const crit=Math.floor(_s.nTrials/2)-1;
+    met=_correctT1>=crit&&_correctT2>=crit; advance_=met;
+    total=_correctT1+_correctT2; n=_s.nTrials;
+  }
+  if (advance_) { _phaseIdx++; _phaseSessionCount=0; }
+
+  const next=_s.phases[_phaseIdx]??'Done';
+  let outcome=advance_?`Next: ${next}`:'Repeating session…';
+  if (phase==='PreTraining'&&met&&!advance_)
+    outcome=`(${_preConsec}/${PRETRAIN_CONSEC} consecutive) — keep going!`;
+
+  document.getElementById('end-msg').textContent =
+    `Score: ${total} / ${n}\n\n${met?'Criterion reached!':'Criterion not reached.'}\n\n${outcome}`;
+  document.getElementById('btn-continue').textContent = advance_?'Continue':'Repeat';
+  document.getElementById('btn-continue').style.display =
+    (_phaseIdx>=_s.phases.length) ? 'none' : '';
+  showScreen('screen-end');
+}
+
+function endExperiment() {
+  document.getElementById('end-msg').textContent = 'All phases complete!\n\nGreat work.';
+  document.getElementById('btn-continue').style.display = 'none';
+  showScreen('screen-end');
+}
+
+// ─── Input handling ───────────────────────────────────────────────
+
+function onChoice(side) {
+  if (!_accepting) return;
+  const btn = document.getElementById(side==='left'?'btn-left':'btn-right');
+  if (btn.classList.contains('hidden')) return;
+  const tr=_current; if(!tr) return;
+  respond(side, side==='left'?tr.leftShape:tr.rightShape, side==='left'?tr.leftColor:tr.rightColor);
+}
+
+document.getElementById('btn-left').addEventListener('click',  ()=>onChoice('left'));
+document.getElementById('btn-right').addEventListener('click', ()=>onChoice('right'));
+document.addEventListener('keydown', e => {
+  if (e.key==='a'||e.key==='A') onChoice('left');
+  if (e.key==='d'||e.key==='D') onChoice('right');
+});
+
+// ─── Wiring: individuals page ─────────────────────────────────────
+
+function renderGrid() {
+  const grid=document.getElementById('ind-grid');
+  grid.innerHTML='';
+  const inds=parseCsv(getRawCsv());
+  if (!inds.length) {
+    grid.innerHTML='<p style="color:#888;padding:12px">No individuals found.<br>Click "Edit individuals" to add some.</p>';
+    return;
+  }
+  inds.forEach(ind => {
+    const b=document.createElement('button');
+    b.className='ind-btn'; b.textContent=ind.individual_id;
+    b.addEventListener('click', ()=>{ _individual=ind; fillSetup(ind); showScreen('screen-setup'); });
+    grid.appendChild(b);
+  });
+}
+
+document.getElementById('edit-ind-btn').addEventListener('click', ()=>{
+  document.getElementById('ind-csv-edit').value=getRawCsv();
+  document.getElementById('modal-edit').classList.add('open');
+});
+document.getElementById('modal-cancel').addEventListener('click', ()=>
+  document.getElementById('modal-edit').classList.remove('open'));
+document.getElementById('modal-save').addEventListener('click', ()=>{
+  saveRawCsv(document.getElementById('ind-csv-edit').value);
+  document.getElementById('modal-edit').classList.remove('open');
+  renderGrid();
+});
+
+// ─── Wiring: setup page ───────────────────────────────────────────
+
+document.getElementById('btn-back').addEventListener('click', ()=>showScreen('screen-individuals'));
+tglBind('tg-first-rule', v=>refreshStartAt(v));
+tglBind('tg-bg-a');
+tglBind('tg-target');
+tglBind('tg-transfer');
+document.getElementById('step-minus').addEventListener('click', ()=>{ if(_trialsIdx>0){_trialsIdx--;refreshStepper();} });
+document.getElementById('step-plus').addEventListener('click',  ()=>{ if(_trialsIdx<TRIAL_OPTIONS.length-1){_trialsIdx++;refreshStepper();} });
+document.getElementById('start-btn').addEventListener('click', startSession);
+
+// ─── Wiring: session-end page ─────────────────────────────────────
+
+document.getElementById('btn-continue').addEventListener('click', ()=>beginPhase());
+document.getElementById('btn-dl').addEventListener('click', ()=>_csv?.download());
+document.getElementById('btn-exit').addEventListener('click', ()=>{
+  _csv?.download();
+  showScreen('screen-individuals');
+  renderGrid();
+});
+
+// ─── Boot ─────────────────────────────────────────────────────────
+
+renderGrid();
+</script>
+</body>
+</html>
