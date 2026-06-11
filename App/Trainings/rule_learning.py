@@ -49,8 +49,8 @@ OPPOSITE = {
     'star': 'square', 'square': 'star',
 }
 
-_STRIPE_COLOR1 = QColor(100,  0, 100)
-_STRIPE_COLOR2 = QColor(160, 40, 160)
+_STRIPE_COLOR1 = QColor( 80,  80,  80)   # dark grey stripe
+_STRIPE_COLOR2 = QColor(160, 160, 160)   # light grey stripe
 _STRIPE_WIDTH  = 24
 _STRIPE_STEP   = 48
 
@@ -771,7 +771,7 @@ class RuleLearningTraining(TrainingWindow):
     def _setRuleBg(self, name):
         """Set background by name: 'lightgrey', 'striped', or 'black'."""
         if name == 'striped':
-            self.setBackgroundColor(QColor(100, 0, 100))
+            self.setBackgroundColor(QColor(80, 80, 80))
             if self._stripe_bg:
                 self._stripe_bg.setGeometry(self.view.rect())
                 self._stripe_bg.show()

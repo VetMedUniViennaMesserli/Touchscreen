@@ -132,7 +132,7 @@ Two geometric shapes are shown side by side on the **task screen** (primary moni
 | Background | Rule | Correct stimulus |
 |---|---|---|
 | Light grey | Rule A | Stimulus with the **target colour** |
-| Diagonal purple stripes | Rule B | Stimulus with the **target shape** |
+| Diagonal grey stripes | Rule B | Stimulus with the **target shape** |
 
 The setup dialog and session-end screen are always shown on the **secondary monitor** (if connected), so the subject cannot interact with control options. If only one monitor is present, everything appears on the same screen.
 
