@@ -61,6 +61,12 @@ class ShapeButton(QWidget):
             ])
             painter.drawPolygon(poly)
 
+        elif self.shape == 'cross':
+            cx, cy = s / 2, s / 2
+            bar = d * 0.28
+            painter.drawRect(QRectF(cx - bar / 2, m, bar, d))
+            painter.drawRect(QRectF(m, cy - bar / 2, d, bar))
+
         elif self.shape == 'star':
             cx, cy   = s / 2, s / 2
             outer_r  = d / 2
