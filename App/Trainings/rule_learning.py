@@ -775,7 +775,7 @@ class RuleLearningTraining(TrainingWindow):
             if self._stripe_bg:
                 self._stripe_bg.setGeometry(self.view.rect())
                 self._stripe_bg.show()
-                self._stripe_bg.raise_()
+                self._stripe_bg.lower()  # must stay behind the container
         else:
             if self._stripe_bg:
                 self._stripe_bg.hide()
