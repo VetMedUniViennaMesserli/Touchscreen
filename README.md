@@ -278,9 +278,7 @@ One row per regular trial (ER correction trials are not logged). Columns:
 
 A browser-based version of Rule Learning is available at:
 
-```
-https://vetmeduniviennamesserli.github.io/Touchscreen/
-```
+[https://vetmeduniviennamesserli.github.io/Touchscreen/](https://vetmeduniviennamesserli.github.io/Touchscreen/)
 
 To enable it, go to **Settings → Pages** in the GitHub repository, set the source to **Deploy from a branch**, choose branch `main` and folder `/docs`, then click Save. The page will be live within a minute and redeploys automatically on every push to `main`.
 
