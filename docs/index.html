@@ -220,6 +220,23 @@
     .shape-btn svg { width: 100%; height: 100%; display: block; }
     .shape-btn.hidden { visibility: hidden; pointer-events: none; }
 
+    @keyframes btn-press {
+      0%   { transform: scale(1);    filter: brightness(1); }
+      25%  { transform: scale(0.84); filter: brightness(1.5); }
+      100% { transform: scale(1);    filter: brightness(1); }
+    }
+    @keyframes btn-correct {
+      0%   { transform: scale(0.84); filter: brightness(1.5) drop-shadow(0 0 24px #00ff80); }
+      100% { transform: scale(1);    filter: brightness(1)   drop-shadow(0 0 0px #00ff80); }
+    }
+    @keyframes btn-wrong {
+      0%   { transform: scale(0.84); filter: brightness(1.5) drop-shadow(0 0 24px #ff2020); }
+      100% { transform: scale(1);    filter: brightness(1)   drop-shadow(0 0 0px #ff2020); }
+    }
+    .shape-btn.anim-press   { animation: btn-press   0.18s ease-out forwards; }
+    .shape-btn.anim-correct { animation: btn-correct 0.35s ease-out forwards; }
+    .shape-btn.anim-wrong   { animation: btn-wrong   0.18s ease-out forwards; }
+
     /* ── Session-end screen ────────────────────────────────────────── */
     #screen-end {
       flex-direction: column;
@@ -886,7 +903,15 @@ function respond(side, shape, color) {
     });
   }
 
-  // Feedback
+  // Visual feedback on the clicked button
+  function animBtn(btnId, cls) {
+    const b = document.getElementById(btnId);
+    b.classList.remove('anim-press','anim-correct','anim-wrong');
+    void b.offsetWidth; // reflow to restart animation
+    b.classList.add(cls);
+    b.addEventListener('animationend', () => b.classList.remove(cls), { once: true });
+  }
+
   if (timeout) {
     playTone(FAILURE_HZ);
     document.getElementById('screen-task').style.background = TIMEOUT_BG;
@@ -894,9 +919,11 @@ function respond(side, shape, color) {
     setTimeout(_inER?showER:showTrial, FEEDBACK_MS);
   } else if (correct) {
     playTone(SUCCESS_HZ);
+    animBtn(side==='left'?'btn-left':'btn-right', 'anim-correct');
     setTimeout(advance, ITI_CORRECT_MS);
   } else {
     playTone(FAILURE_HZ);
+    animBtn(side==='left'?'btn-left':'btn-right', 'anim-wrong');
     document.getElementById('screen-task').style.background = WRONG_BG;
     if (_correction < MAX_CORR-1) { _correction++; setTimeout(_inER?showER:showTrial, FEEDBACK_MS); }
     else setTimeout(advance, FEEDBACK_MS);
