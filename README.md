@@ -2,20 +2,6 @@
 
 A touchscreen-based cognitive training system built with PySide6/Qt. Designed for deployment on a Raspberry Pi with a touchscreen and optionally a second monitor.
 
-## Web version (GitHub Pages)
-
-A browser-based version of Rule Learning is available at:
-
-```
-https://<your-github-org>.github.io/Touchscreen/
-```
-
-To enable it, go to **Settings → Pages** in the GitHub repository, set the source to **Deploy from a branch**, choose branch `main` and folder `/docs`, then click Save. The page will be live within a minute.
-
-The web version runs entirely in the browser — no installation needed. It supports touch and keyboard (A / D). The setup dialog and session-end screen appear on the same display (browsers have no multi-monitor API). Session data is downloaded as a CSV file when you press Exit or the Download button on the session-end screen. Individuals are stored in the browser's `localStorage` and can be edited directly in the app.
-
----
-
 ## Quick install / uninstall (Linux)
 
 Clones the repo, sets up the virtual environment, and enables the systemd autostart service in one command:
@@ -285,3 +271,17 @@ One row per regular trial (ER correction trials are not logged). Columns:
 | `choice_color` | Colour of the chosen stimulus (`NA` on timeout) |
 | `choice_latency` | Seconds from trial onset to response |
 | `correction_trial` | `0` on a first attempt; counts upward for each correction attempt |
+
+---
+
+## Web version (GitHub Pages)
+
+A browser-based version of Rule Learning is available at:
+
+```
+https://vetmeduniviennamesserli.github.io/Touchscreen/
+```
+
+To enable it, go to **Settings → Pages** in the GitHub repository, set the source to **Deploy from a branch**, choose branch `main` and folder `/docs`, then click Save. The page will be live within a minute and redeploys automatically on every push to `main`.
+
+The web version runs entirely in the browser — no installation needed. It supports touch and keyboard (A / D). The setup dialog and session-end screen appear on the same display (browsers have no multi-monitor API). Session data is downloaded as a CSV file when you press Exit or the Download button on the session-end screen. Individuals are stored in the browser's `localStorage` and can be edited directly in the app.
