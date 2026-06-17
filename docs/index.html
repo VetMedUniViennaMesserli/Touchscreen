@@ -783,6 +783,8 @@ function evaluateSession() {
   document.getElementById('end-msg').textContent =
     `Score: ${_correctT1+_correctT2} / ${_s.nTrials}\n\n${met?'Criterion reached!':'Criterion not reached.'}\n\n${outcome}`;
   document.getElementById('btn-continue').textContent = met ? 'Continue' : 'Repeat';
+
+  uploadToGDrive(_csv);   // save snapshot after every session, not just at the end
   showScreen('screen-end');
 }
 
