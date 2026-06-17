@@ -101,48 +101,55 @@ def _screen_geometry(screen=None):
 # Trial builders
 # ---------------------------------------------------------------------------
 
-def _even(n):
-    return n if n % 2 == 0 else n - 1
+def _quad(n):
+    """Round n down to nearest multiple of 4."""
+    return n - (n % 4)
 
 
 def build_ruleA(n, tgt_shape, oth_shape, tgt_color, oth_color):
-    """RuleA: tgt_color side is always rewarded."""
-    n = _even(n)
-    sides  = ['left'] * (n // 2) + ['right'] * (n // 2)
-    shapes = [tgt_shape] * (n // 2) + [oth_shape] * (n // 2)
-    random.shuffle(sides); random.shuffle(shapes)
-    trials = []
-    for i in range(n):
-        cs  = sides[i]
-        ts  = shapes[i]
-        os_ = oth_shape if ts == tgt_shape else tgt_shape
-        if cs == 'left':
-            ls, rs, lc, rc = ts, os_, tgt_color, oth_color
-        else:
-            ls, rs, lc, rc = os_, ts, oth_color, tgt_color
-        trials.append({'rule': 'RuleA', 'left_shape': ls, 'left_color': lc,
-                        'right_shape': rs, 'right_color': rc, 'correct_side': cs})
-    return trials
+    """RuleA: tgt_color side is always rewarded.
+    Exactly n/4 of each sub-type: (left|right) × (common S+|other S+).
+    """
+    n = _quad(n)
+    quarter = n // 4
+    pool = []
+    for cs in ('left', 'right'):
+        for ts in (tgt_shape, oth_shape):      # common S+ vs other S+
+            os_ = oth_shape if ts == tgt_shape else tgt_shape
+            if cs == 'left':
+                ls, rs, lc, rc = ts, os_, tgt_color, oth_color
+            else:
+                ls, rs, lc, rc = os_, ts, oth_color, tgt_color
+            pool.extend([{'rule': 'RuleA', 'left_shape': ls, 'left_color': lc,
+                           'right_shape': rs, 'right_color': rc,
+                           'correct_side': cs}] * quarter)
+    random.shuffle(pool)
+    pool = _enforce_no_repeat(pool)
+    pool = _enforce_max_side_streak(pool, 3)
+    return pool
 
 
 def build_ruleB(n, tgt_shape, oth_shape, tgt_color, oth_color):
-    """RuleB: tgt_shape side is always rewarded."""
-    n = _even(n)
-    sides  = ['left'] * (n // 2) + ['right'] * (n // 2)
-    colors = [tgt_color] * (n // 2) + [oth_color] * (n // 2)
-    random.shuffle(sides); random.shuffle(colors)
-    trials = []
-    for i in range(n):
-        cs  = sides[i]
-        tc  = colors[i]
-        oc  = oth_color if tc == tgt_color else tgt_color
-        if cs == 'left':
-            ls, rs, lc, rc = tgt_shape, oth_shape, tc, oc
-        else:
-            ls, rs, lc, rc = oth_shape, tgt_shape, oc, tc
-        trials.append({'rule': 'RuleB', 'left_shape': ls, 'left_color': lc,
-                        'right_shape': rs, 'right_color': rc, 'correct_side': cs})
-    return trials
+    """RuleB: tgt_shape side is always rewarded.
+    Exactly n/4 of each sub-type: (left|right) × (common S+|other S+).
+    """
+    n = _quad(n)
+    quarter = n // 4
+    pool = []
+    for cs in ('left', 'right'):
+        for tc in (tgt_color, oth_color):      # common S+ vs other S+
+            oc = oth_color if tc == tgt_color else tgt_color
+            if cs == 'left':
+                ls, rs, lc, rc = tgt_shape, oth_shape, tc, oc
+            else:
+                ls, rs, lc, rc = oth_shape, tgt_shape, oc, tc
+            pool.extend([{'rule': 'RuleB', 'left_shape': ls, 'left_color': lc,
+                           'right_shape': rs, 'right_color': rc,
+                           'correct_side': cs}] * quarter)
+    random.shuffle(pool)
+    pool = _enforce_no_repeat(pool)
+    pool = _enforce_max_side_streak(pool, 3)
+    return pool
 
 
 def _enforce_no_repeat(trials):
@@ -215,34 +222,52 @@ def _move_type1_first(trials, tgt_shape, tgt_color):
     return trials
 
 
-def build_alternate(n, tgt_shape, oth_shape, tgt_color, oth_color, start='RuleA'):
-    n = _even(n); half = n // 2
-    a = build_ruleA(half, tgt_shape, oth_shape, tgt_color, oth_color)
-    b = build_ruleB(half, tgt_shape, oth_shape, tgt_color, oth_color)
-    trials = a + b if start == 'RuleA' else b + a
-    trials = _enforce_no_repeat(trials)
-    trials = _enforce_max_side_streak(trials, 2)
+def _move_type2_first(trials, tgt_shape, tgt_color):
+    """Ensure the first trial has the other S+ present (type-2 trial, for transfer sessions)."""
+    def is_type2(t):
+        cs = t.get('correct_side')
+        if cs == 'left':
+            return not (t.get('left_shape') == tgt_shape and t.get('left_color') == tgt_color)
+        if cs == 'right':
+            return not (t.get('right_shape') == tgt_shape and t.get('right_color') == tgt_color)
+        return False
+    for i, t in enumerate(trials):
+        if is_type2(t):
+            if i != 0:
+                trials[0], trials[i] = trials[i], trials[0]
+            break
     return trials
 
 
+def build_alternate(n, tgt_shape, oth_shape, tgt_color, oth_color, start='RuleA'):
+    n = _quad(n); half = n // 2
+    a = build_ruleA(half, tgt_shape, oth_shape, tgt_color, oth_color)
+    b = build_ruleB(half, tgt_shape, oth_shape, tgt_color, oth_color)
+    # Preserve block order: first-rule block, then second-rule block.
+    # Each block is already internally balanced and streak-enforced.
+    return a + b if start == 'RuleA' else b + a
+
+
 def build_mixed(n, tgt_shape, oth_shape, tgt_color, oth_color):
-    n = _even(n); half = n // 2
+    n = _quad(n); half = n // 2
     trials = (build_ruleA(half, tgt_shape, oth_shape, tgt_color, oth_color) +
               build_ruleB(half, tgt_shape, oth_shape, tgt_color, oth_color))
     random.shuffle(trials)
     trials = _enforce_max_rule_streak(trials, 3)
+    trials = _enforce_no_repeat(trials)
+    trials = _enforce_max_side_streak(trials, 3)
     return trials
 
 
 def build_pretrain(n):
-    """Pre-training: cross symbol shown on one side, semirandom L/R, max 2 consecutive same side."""
-    n = _even(n)
+    """Pre-training: cross symbol shown on one side, semirandom L/R, max 3 consecutive same side."""
+    n = _quad(n)
     sides = ['left'] * (n // 2) + ['right'] * (n // 2)
     random.shuffle(sides)
     trials = [{'rule': 'PreTraining', 'correct_side': s,
                'left_shape': 'cross', 'left_color': 'white',
                'right_shape': 'cross', 'right_color': 'white'} for s in sides]
-    return _enforce_max_side_streak(trials, 2)
+    return _enforce_max_side_streak(trials, 3)
 
 
 def build_phase(phase, n, tgt_shape, oth_shape, tgt_color, oth_color,
@@ -744,8 +769,10 @@ class RuleLearningTraining(TrainingWindow):
         layout.setSpacing(0)
         layout.setContentsMargins(0, 0, 0, 0)
 
-        self._btnL = ShapeButton('circle', 'black', 300, self._onLeft)
-        self._btnR = ShapeButton('circle', 'black', 300, self._onRight)
+        geo      = _screen_geometry()
+        btn_size = max(200, min(int(geo.height() * 0.40), 600))
+        self._btnL = ShapeButton('circle', 'black', btn_size, self._onLeft)
+        self._btnR = ShapeButton('circle', 'black', btn_size, self._onRight)
         layout.addWidget(self._btnL, alignment=Qt.AlignCenter)
         layout.addWidget(self._btnR, alignment=Qt.AlignCenter)
 
@@ -831,9 +858,11 @@ class RuleLearningTraining(TrainingWindow):
                 xfr_tgt_shape=self._xfr_tgt_shape, xfr_oth_shape=self._xfr_oth_shape,
                 xfr_tgt_color=self._xfr_tgt_color, xfr_oth_color=self._xfr_oth_color,
             )
-            # Alternate/Mixed: first regular trial must have common S+ (type-1)
-            if phase in ('Alternate', 'AlternatingTransfer', 'Mixed', 'MixedTransfer'):
-                ts2, _, tc2, _ = self._currentStimuli()
+            # First regular trial after ER: type-1 for training phases, type-2 for transfer
+            ts2, _, tc2, _ = self._currentStimuli()
+            if phase in ('AlternatingTransfer', 'MixedTransfer'):
+                self._trials = _move_type2_first(self._trials, ts2, tc2)
+            else:
                 self._trials = _move_type1_first(self._trials, ts2, tc2)
             self._in_er     = True
             self._er_trials = self._buildERTrials()
@@ -873,12 +902,14 @@ class RuleLearningTraining(TrainingWindow):
 
         # Transfer ER → black bg; training ER → rule bg of first trial
         if self._isTransferPhase(phase):
+            self._er_bg = 'black'
             self._setRuleBg('black')
             tgt_s = self._xfr_tgt_shape
             tgt_c = self._xfr_tgt_color
         else:
             first_rule = self._trials[0]['rule'] if self._trials else 'RuleA'
-            self._setRuleBg(self._rule_bg[first_rule])
+            self._er_bg = self._rule_bg[first_rule]
+            self._setRuleBg(self._er_bg)
             tgt_s = self._tgt_shape
             tgt_c = self._tgt_color
 
@@ -958,8 +989,8 @@ class RuleLearningTraining(TrainingWindow):
         latency = (QDateTime.currentMSecsSinceEpoch() - self._resp_start_ms) / 1000.0
         phase   = self._currentPhase()
 
-        # Determine trial type
-        if self._in_er or tr.get('trial_type') == 0:
+        # Determine trial type (0 for ER / pretrain, 1=common S+, 2=other S+)
+        if self._in_er or tr.get('trial_type') == 0 or phase == 'PreTraining':
             trial_type = 0
         else:
             ts_cur, _, tc_cur, _ = self._currentStimuli()
@@ -976,44 +1007,64 @@ class RuleLearningTraining(TrainingWindow):
                     if trial_type == 1: self._correct_t1 += 1
                     else:               self._correct_t2 += 1
 
-        # Write CSV row for non-ER trials
-        if not self._in_er:
-            ts_cur, _, tc_cur, _ = self._currentStimuli()
-            common_sp = f"{tc_cur} {ts_cur}"
-            rule_key  = tr.get('rule', 'RuleA')
-            bg_name   = self._rule_bg.get(rule_key, 'lightgrey') if phase != 'PreTraining' else 'black'
-            bg_shown  = 'grey' if bg_name == 'lightgrey' else bg_name
+        # Write CSV row for ALL trials (ER, pretrain, and regular)
+        ts_cur, _, tc_cur, _ = self._currentStimuli()
+        common_sp = f"{tc_cur} {ts_cur}"
+        rule_key  = tr.get('rule', 'RuleA')
+
+        if phase == 'PreTraining':
+            bg_name = 'black'
+        elif self._in_er:
+            bg_name = getattr(self, '_er_bg', 'lightgrey')
+        else:
+            bg_name = self._rule_bg.get(rule_key, 'lightgrey')
+        bg_shown = 'grey' if bg_name == 'lightgrey' else bg_name
+
+        # Stim strings: write "none" for the hidden side (ER and pretrain)
+        if phase == 'PreTraining':
+            cs = tr.get('correct_side')
+            ls = (f"{tr.get('left_color','none')} {tr.get('left_shape','none')}"
+                  if cs == 'left' else 'none')
+            rs = (f"{tr.get('right_color','none')} {tr.get('right_shape','none')}"
+                  if cs == 'right' else 'none')
+        elif self._in_er:
+            ls = (f"{tr.get('left_color')} {tr.get('left_shape')}"
+                  if tr.get('left_color') is not None else 'none')
+            rs = (f"{tr.get('right_color')} {tr.get('right_shape')}"
+                  if tr.get('right_color') is not None else 'none')
+        else:
             ls = f"{tr.get('left_color','none')} {tr.get('left_shape','none')}"
             rs = f"{tr.get('right_color','none')} {tr.get('right_shape','none')}"
-            now = datetime.now()
-            self._csv.write(
-                subjectID=self._individual_id,
-                date=now.strftime('%Y-%m-%d'),
-                time=now.strftime('%H:%M:%S'),
-                phase=phase,
-                phase_count=self._phase_idx + 1,
-                session_count=self._phase_session_count,
-                trial_count=self._trial_count,
-                target_color=self._tgt_color,
-                target_shape=self._tgt_shape,
-                bg_shown=bg_shown,
-                rule=rule_key,
-                left_shape=tr.get('left_shape', 'none'),
-                left_color=tr.get('left_color', 'none'),
-                right_shape=tr.get('right_shape', 'none'),
-                right_color=tr.get('right_color', 'none'),
-                commonSp=common_sp,
-                left_stim=ls,
-                right_stim=rs,
-                trial_type=trial_type,
-                target_side=tgt,
-                choice_side=choice_side if choice_side else 'NA',
-                reward_score=1 if correct else 0,
-                choice_shape=choice_shape or 'NA',
-                choice_color=choice_color or 'NA',
-                choice_latency=f"{latency:.3f}",
-                correction_trial=self._correction,
-            )
+
+        now = datetime.now()
+        self._csv.write(
+            subjectID=self._individual_id,
+            date=now.strftime('%Y-%m-%d'),
+            time=now.strftime('%H:%M:%S'),
+            phase=phase,
+            phase_count=self._phase_idx + 1,
+            session_count=self._phase_session_count,
+            trial_count=self._trial_count,
+            target_color=self._tgt_color,
+            target_shape=self._tgt_shape,
+            bg_shown=bg_shown,
+            rule=rule_key,
+            left_shape=tr.get('left_shape', 'none') or 'none',
+            left_color=tr.get('left_color', 'none') or 'none',
+            right_shape=tr.get('right_shape', 'none') or 'none',
+            right_color=tr.get('right_color', 'none') or 'none',
+            commonSp=common_sp,
+            left_stim=ls,
+            right_stim=rs,
+            trial_type=trial_type,
+            target_side=tgt,
+            choice_side=choice_side if choice_side else 'NA',
+            reward_score=1 if correct else 0,
+            choice_shape=choice_shape or 'NA',
+            choice_color=choice_color or 'NA',
+            choice_latency=f"{latency:.3f}",
+            correction_trial=self._correction,
+        )
 
         # Feedback
         self._clearFeedbackBg()
@@ -1064,7 +1115,7 @@ class RuleLearningTraining(TrainingWindow):
             total   = self._pretrain_correct
             n       = PRETRAIN_TRIALS
         else:
-            criterion = self._n_trials // 2 - 1
+            criterion = round(self._n_trials / 2 * 10 / 12)   # 10/12 per trial type
             met = self._correct_t1 >= criterion and self._correct_t2 >= criterion
             advance = met
             total   = self._correct_t1 + self._correct_t2

@@ -69,8 +69,8 @@ class ShapeButton(QWidget):
 
         elif self.shape == 'star':
             cx, cy   = s / 2, s / 2
-            outer_r  = d / 2
-            inner_r  = outer_r * 0.38
+            outer_r  = d / 2 * 1.08   # slightly larger to match square visual weight
+            inner_r  = outer_r * 0.50  # less spiky for more filled area
             path = QPainterPath()
             pts = []
             for i in range(10):
