@@ -147,12 +147,12 @@ The experiment runs through seven phases in order. Each phase repeats sessions u
 | # | Phase | Stimuli | Criterion to advance |
 |---|---|---|---|
 | 1 | **Pre-Training** | White cross on black — one side only | ≥ 10 / 12 correct in **2 consecutive sessions** |
-| 2 | **Rule A** (or B first, depending on counterbalance) | Training colours & shapes | ≥ N/2 − 1 correct for each trial type |
-| 3 | **Rule B** (or A) | Training colours & shapes | ≥ N/2 − 1 correct for each trial type |
-| 4 | **Alternate** | Training colours & shapes — rules blocked (half A, half B) | ≥ N/2 − 1 correct for each trial type |
-| 5 | **Mixed** | Training colours & shapes — rules interleaved | ≥ N/2 − 1 correct for each trial type |
-| 6 | **Alternating Transfer** | Novel colours (blue/yellow) and shapes (star/square) — rules blocked | ≥ N/2 − 1 correct for each trial type |
-| 7 | **Mixed Transfer** | Novel colours and shapes — rules interleaved | ≥ N/2 − 1 correct for each trial type |
+| 2 | **Rule A** (or B first, depending on counterbalance) | Training colours & shapes | ≥ 10 / 12 correct for each trial type |
+| 3 | **Rule B** (or A) | Training colours & shapes | ≥ 10 / 12 correct for each trial type |
+| 4 | **Alternate** | Training colours & shapes — rules blocked (half A, half B) | ≥ 10 / 12 correct for each trial type |
+| 5 | **Mixed** | Training colours & shapes — rules interleaved | ≥ 10 / 12 correct for each trial type |
+| 6 | **Alternating Transfer** | Novel colours (blue/yellow) and shapes (star/square) — rules blocked | ≥ 10 / 12 correct for each trial type |
+| 7 | **Mixed Transfer** | Novel colours and shapes — rules interleaved | ≥ 10 / 12 correct for each trial type |
 
 **Training stimuli** (phases 2–5): the target colour and shape configured per individual (e.g. black triangle / white circle).  
 **Transfer stimuli** (phases 6–7): novel blue/yellow colours and star/square shapes. Background rules (which bg = which rule) remain unchanged.
@@ -167,14 +167,17 @@ Only one stimulus is shown (the common S+, i.e. the stimulus that satisfies both
 
 - In training phases the ER trials use the **rule background** of the first trial in that session.
 - In transfer phases the ER trials use a **black background** so the new stimulus stands out clearly.
-- A wrong choice (or timeout) during an ER trial shows a **red screen** and repeats the same ER trial (correction trial). These correction attempts are **not recorded** in the session log.
+- A wrong choice (or timeout) during an ER trial shows a **red screen** and repeats the same ER trial (correction trial).
+- ER trials **are recorded** in the session log with `trial_count = 0` and `trial_type = 0`. The hidden side is logged as `none`.
 
 **Regular trials (trials 5 onward)**
 
 Both stimuli are shown. The subject must choose the correct one according to the active rule signalled by the background.
 
-- The first regular trial of every Alternate or Mixed session is always a **type-1 trial** — the common S+ is present, making the required rule unambiguous.
-- **Alternate** sessions: no two consecutive trials have the same stimulus layout; the S+ side changes at least every 3rd trial; the two rules are presented in two equal blocks (first rule first, matching the individual's counterbalance setting).
+- The first regular trial of every non-Pre-Training session is always a **type-1 trial** (common S+ present). Transfer sessions start with a **type-2 trial** (other S+ present) instead.
+- **All sessions**: exactly equal numbers of each of the 4 sub-types — (common S+ left), (common S+ right), (other S+ left), (other S+ right). For a 24-trial session this is 6 of each; for a 12-trial rule block inside Alternate/Mixed it is 3 of each.
+- **All sessions**: no two consecutive trials have the same full stimulus layout; the S+ side does not repeat more than 3 times in a row.
+- **Alternate** sessions: the two rules are presented in two equal sequential blocks (first rule first, matching the individual's counterbalance setting).
 - **Mixed** sessions: no more than 3 consecutive trials of the same rule.
 - A wrong choice triggers a **red screen** (800 ms) followed by a correction trial (same trial repeated). Up to 5 correction attempts per trial. Correction trials are recorded in the log with `correction_trial > 0`.
 - A correct choice triggers a **success sound** and the next trial appears immediately (no green feedback screen).
@@ -182,7 +185,7 @@ Both stimuli are shown. The subject must choose the correct one according to the
 
 **Pre-Training trials**
 
-All 12 trials per session show only a white cross on a black background, visible on one side at a time. Positioning is semirandom — no more than 2 consecutive trials on the same side. Criterion: 10 or more correct in 2 consecutive sessions.
+All 12 trials per session show only a white cross on a black background, visible on one side at a time. Positioning is semirandom — no more than 3 consecutive trials on the same side. Criterion: 10 or more correct in 2 consecutive sessions.
 
 ---
 
@@ -251,7 +254,7 @@ One row per regular trial (ER correction trials are not logged). Columns:
 | `phase` | Phase name (`PreTraining`, `RuleA`, `RuleB`, `Alternate`, `Mixed`, `AlternatingTransfer`, `MixedTransfer`) |
 | `phase_count` | Index of this phase in the full sequence (1-based; not always the same number for RuleA/B due to counterbalancing) |
 | `session_count` | Session number within the current phase |
-| `trial_count` | Trial number within the session (starts at 1; correction trials do not increment this) |
+| `trial_count` | Trial number within the session (starts at 1 for regular trials; `0` for ER trials; correction trials do not increment this) |
 | `target_color` | Target colour according to Rule A |
 | `target_shape` | Target shape according to Rule B |
 | `bg_shown` | Background on this trial: `grey` or `striped` |
@@ -282,4 +285,12 @@ A browser-based version of Rule Learning is available at:
 
 To enable it, go to **Settings → Pages** in the GitHub repository, set the source to **Deploy from a branch**, choose branch `main` and folder `/docs`, then click Save. The page will be live within a minute and redeploys automatically on every push to `main`.
 
-The web version runs entirely in the browser — no installation needed. It supports touch and keyboard (A / D). The setup dialog and session-end screen appear on the same display (browsers have no multi-monitor API). Session data is downloaded as a CSV file when you press Exit or the Download button on the session-end screen. Individuals are stored in the browser's `localStorage` and can be edited directly in the app.
+The web version is designed for **human participants** and differs from the pigtouch version in several ways:
+
+- **ID code entry** — participants type an alphanumeric identifier code before the task starts. No subject-selection screen or manual counterbalancing controls.
+- **Automatic counterbalancing** — first rule, background assignment, target stimulus, and transfer stimulus are assigned automatically based on the ID code (deterministic hash across 8 predefined configurations, so the same code always produces the same assignment).
+- **No Pre-Training phase** — the experiment begins directly at Rule A (or B, per counterbalance).
+- **Session-end screens** — show score and a Continue/Repeat button only. No Exit or Download buttons.
+- **Completion screen** — after all phases are done, participants see a completion message and a button linking to the follow-up survey.
+- **Automatic data upload** — session CSV is uploaded to Google Drive via a Google Apps Script web app when the experiment ends. The upload URL is set in the `GDRIVE_URL` constant at the top of `docs/index.html`.
+- Supports touch and keyboard (**A** = left, **D** = right). All trial logic (counterbalancing, trial ordering, criterion) matches the pigtouch version.
