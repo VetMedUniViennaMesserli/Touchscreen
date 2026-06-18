@@ -614,16 +614,6 @@ function beginPhase() {
   _trialIdx=0; _trialCount=0; _correction=0;
   _correctT1=0; _correctT2=0;
 
-  // Log session start and upload immediately
-  const _startNow = new Date();
-  _csv.write({
-    subjectID:_s.individualId, date:fmtDate(_startNow), time:fmtTimeColon(_startNow),
-    phase, phase_count:_phaseIdx+1, session_count:_phaseSessionCount,
-    trial_count:0, target_color:_s.tgtColor, target_shape:_s.tgtShape,
-    rule:'SESSION_START',
-  });
-  uploadToGDrive(_csv);
-
   const [tS,oS,tC,oC] = curStimuli();
   _trials = buildPhase(phase, _s.nTrials, tS, oS, tC, oC, _s.firstRule,
     _s.xfrTgtShape, _s.xfrOthShape, _s.xfrTgtColor, _s.xfrOthColor);
