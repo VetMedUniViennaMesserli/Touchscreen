@@ -292,5 +292,5 @@ The web version is designed for **human participants** and differs from the pigt
 - **No Pre-Training phase** — the experiment begins directly at Rule A (or B, per counterbalance).
 - **Session-end screens** — show score and a Continue/Repeat button only. No Exit or Download buttons.
 - **Completion screen** — after all phases are done, participants see a completion message and a button linking to the follow-up survey.
-- **Automatic data upload** — session CSV is uploaded to Google Drive via a Google Apps Script web app when the experiment ends. The upload URL is set in the `GDRIVE_URL` constant at the top of `docs/index.html`.
+- **Automatic data upload** — the accumulated CSV is uploaded to Google Drive after every session end and again when the experiment completes. This means data is preserved even if a participant quits early. The upload URL is set in the `GDRIVE_URL` constant at the top of `docs/index.html`.
 - Supports touch and keyboard (**A** = left, **D** = right). All trial logic (counterbalancing, trial ordering, criterion) matches the pigtouch version.
