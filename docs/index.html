@@ -521,10 +521,12 @@ class CsvLog {
 function uploadToGDrive(csvLog) {
   if (!GDRIVE_URL) return;
   try {
+    // no-cors + no Content-Type header avoids CORS preflight, which Apps Script can't handle.
+    // The body is still received as JSON text by doPost via e.postData.contents.
     fetch(GDRIVE_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ filename: csvLog.filename, content: csvLog.toCsvString() }),
+      mode:   'no-cors',
+      body:   JSON.stringify({ filename: csvLog.filename, content: csvLog.toCsvString() }),
     }).catch(() => {});
   } catch(e) {}
 }
