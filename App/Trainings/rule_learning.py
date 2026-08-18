@@ -97,6 +97,26 @@ def _screen_geometry(screen=None):
     return s.geometry()
 
 
+def _placeOnScreen(widget, screen=None):
+    """Bind a top-level widget to a specific screen and show it truly fullscreen.
+
+    setGeometry() alone is not reliable for cross-screen placement of frameless
+    dialogs — window managers (e.g. GNOME/Mutter on Ubuntu) can reposition or
+    resize such windows relative to their own panels/docks instead of honouring
+    the requested geometry, leaving the dialog off-centre with desktop bars
+    showing through. Binding the QWindow to the target screen before calling
+    showFullScreen() (the same approach the main task window already uses)
+    avoids that.
+    """
+    screen = screen or QApplication.primaryScreen()
+    widget.create()
+    handle = widget.windowHandle()
+    if handle is not None:
+        handle.setScreen(screen)
+    widget.setGeometry(screen.geometry())
+    widget.showFullScreen()
+
+
 # ---------------------------------------------------------------------------
 # Trial builders
 # ---------------------------------------------------------------------------
@@ -432,7 +452,6 @@ class RuleLearningSetupDialog(QDialog):
         super().__init__(parent)
         self.setWindowTitle("Rule Learning — Setup")
         self.setWindowFlags(Qt.FramelessWindowHint | Qt.Dialog)
-        self.setGeometry(_screen_geometry(_secondary_screen()))
         self._individual = None
 
         f = QFont(); f.setPointSize(13); self.setFont(f)
@@ -444,6 +463,8 @@ class RuleLearningSetupDialog(QDialog):
         root = QVBoxLayout(self)
         root.setContentsMargins(0, 0, 0, 0)
         root.addWidget(self._stack)
+
+        _placeOnScreen(self, _secondary_screen())
 
     # ── Page 0: individual grid ────────────────────────────────────────────
 
@@ -626,7 +647,6 @@ class _SessionEndDialog(QDialog):
     def __init__(self, message, criterion_met, parent=None):
         super().__init__(parent)
         self.setWindowFlags(Qt.FramelessWindowHint | Qt.Dialog)
-        self.setGeometry(_screen_geometry(_secondary_screen()))
         self._exit_requested = False
 
         pal = self.palette()
@@ -662,6 +682,8 @@ class _SessionEndDialog(QDialog):
         btn_row.addWidget(exitBtn)
 
         vbox.addLayout(btn_row)
+
+        _placeOnScreen(self, _secondary_screen())
 
     def _onExit(self):
         self._exit_requested = True
