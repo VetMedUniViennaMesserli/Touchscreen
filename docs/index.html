@@ -94,7 +94,7 @@
     #screen-task {
       align-items: center;
       justify-content: center;
-      gap: 8vw;
+      gap: 14vw;
     }
     .shape-btn {
       width:  min(40vh, 43vw);
@@ -125,6 +125,15 @@
     .shape-btn.anim-press   { animation: btn-press   0.18s ease-out forwards; }
     .shape-btn.anim-correct { animation: btn-correct 0.35s ease-out forwards; }
     .shape-btn.anim-wrong   { animation: btn-wrong   0.18s ease-out forwards; }
+
+    #flash-overlay {
+      position: absolute; inset: 0;
+      background: #00ff80;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.15s ease-out;
+    }
+    #flash-overlay.active { opacity: 0.85; }
 
     /* ── Session-end screen ────────────────────────────────────────── */
     #screen-end {
@@ -188,6 +197,7 @@
 <!-- ── ID code entry ──────────────────────────────────────────────── -->
 <div id="screen-id" class="screen active">
   <h1>Rule Learning Task</h1>
+  <p>Use your mouse to select a symbol. If you have a touch screen device, you can also swipe across the symbol to select it. Please use one method throughout the whole task.</p>
   <p>Please enter your ID code to begin.</p>
   <div id="id-form">
     <label for="id-input">Your ID code:</label>
@@ -206,6 +216,7 @@
   <button class="shape-btn" id="btn-right">
     <svg id="svg-right" viewBox="0 0 100 100"></svg>
   </button>
+  <div id="flash-overlay"></div>
 </div>
 
 <!-- ── Session-end screen ────────────────────────────────────────── -->
@@ -237,12 +248,24 @@
 // (obtained from Kirsten's script: share the deployed web app URL, not the edit link)
 const GDRIVE_URL = 'https://script.google.com/macros/s/AKfycbzpL20cM_BGfE2YGtPYJW80VXuS5DMCljs5Li-BLj60aDTF1Eu6NDLP9EoUFBph5bsc/exec';
 
+// Separate Apps Script deployment that hands out test_group + counterbalance
+// condition assignments (see docs/apps-script/assignment.gs for its source
+// and deployment steps). Leave blank to fall back to a per-browser
+// localStorage-based assignment (see assignTestGroupAndCondition()).
+const ASSIGN_URL = '';
+
 const TIMEOUT_MS         = 180_000;
 const MAX_CORR           = 5;
 const ER_REPS            = 2;
 const FEEDBACK_MS        = 800;
 const ITI_CORRECT_MS     = 200;
 const N_TRIALS           = 24;
+const MAX_SESSIONS_PER_PHASE = 5;
+
+// Green "get ready" flash: once at the start of every session, plus occasionally
+// at the start of a regular trial. Exact look/timing pending reference video.
+const GREEN_FLASH_MS            = 250;
+const GREEN_FLASH_RANDOM_CHANCE = 0.12;
 
 const OPPOSITE = {
   black:'white', white:'black', blue:'yellow', yellow:'blue',
@@ -255,7 +278,7 @@ const SHAPE_FILL = {
 
 const BG_CSS = {
   lightgrey: '#b4b4b4',
-  striped:   'repeating-linear-gradient(45deg,#505050 0px,#505050 24px,#a0a0a0 24px,#a0a0a0 48px)',
+  striped:   'repeating-linear-gradient(45deg,#505050 0px,#505050 48px,#a0a0a0 48px,#a0a0a0 96px)',
   black:     '#000',
 };
 
@@ -265,24 +288,76 @@ const SUCCESS_HZ = 600;
 const FAILURE_HZ = 200;
 
 // ─── Counterbalancing table ───────────────────────────────────────
-// 8 configurations cycling through all combinations of rule order,
-// background assignment, target stimulus, and transfer stimulus.
+// All 64 combinations of first rule, rule-1 background, training stimulus,
+// and transfer stimulus (from TSparadigm_counterbalancing.xlsx). Each
+// condition should be used at least once per test group before repeating —
+// see requestAssignment()/pickLocalCondition() below.
 const COUNTERBALANCING = [
-  {firstRule:'RuleA', bgA:'lightgrey', targetStim:'black triangle', transferStim:'blue star'},
-  {firstRule:'RuleB', bgA:'striped',   targetStim:'white triangle', transferStim:'yellow square'},
-  {firstRule:'RuleA', bgA:'striped',   targetStim:'black circle',   transferStim:'blue star'},
-  {firstRule:'RuleB', bgA:'lightgrey', targetStim:'white circle',   transferStim:'yellow square'},
-  {firstRule:'RuleA', bgA:'lightgrey', targetStim:'white triangle', transferStim:'yellow square'},
-  {firstRule:'RuleB', bgA:'striped',   targetStim:'black circle',   transferStim:'blue star'},
-  {firstRule:'RuleA', bgA:'striped',   targetStim:'white circle',   transferStim:'yellow square'},
-  {firstRule:'RuleB', bgA:'lightgrey', targetStim:'black triangle', transferStim:'blue star'},
+  {nr: 1, firstRule:'RuleA', bgA:'striped', targetStim:'black circle', transferStim:'yellow star'},
+  {nr: 2, firstRule:'RuleB', bgA:'striped', targetStim:'black circle', transferStim:'yellow star'},
+  {nr: 3, firstRule:'RuleA', bgA:'lightgrey', targetStim:'black circle', transferStim:'yellow star'},
+  {nr: 4, firstRule:'RuleB', bgA:'lightgrey', targetStim:'black circle', transferStim:'yellow star'},
+  {nr: 5, firstRule:'RuleA', bgA:'striped', targetStim:'white circle', transferStim:'yellow star'},
+  {nr: 6, firstRule:'RuleB', bgA:'striped', targetStim:'white circle', transferStim:'yellow star'},
+  {nr: 7, firstRule:'RuleA', bgA:'lightgrey', targetStim:'white circle', transferStim:'yellow star'},
+  {nr: 8, firstRule:'RuleB', bgA:'lightgrey', targetStim:'white circle', transferStim:'yellow star'},
+  {nr: 9, firstRule:'RuleA', bgA:'striped', targetStim:'black triangle', transferStim:'yellow star'},
+  {nr:10, firstRule:'RuleB', bgA:'striped', targetStim:'black triangle', transferStim:'yellow star'},
+  {nr:11, firstRule:'RuleA', bgA:'lightgrey', targetStim:'black triangle', transferStim:'yellow star'},
+  {nr:12, firstRule:'RuleB', bgA:'lightgrey', targetStim:'black triangle', transferStim:'yellow star'},
+  {nr:13, firstRule:'RuleA', bgA:'striped', targetStim:'white triangle', transferStim:'yellow star'},
+  {nr:14, firstRule:'RuleB', bgA:'striped', targetStim:'white triangle', transferStim:'yellow star'},
+  {nr:15, firstRule:'RuleA', bgA:'lightgrey', targetStim:'white triangle', transferStim:'yellow star'},
+  {nr:16, firstRule:'RuleB', bgA:'lightgrey', targetStim:'white triangle', transferStim:'yellow star'},
+  {nr:17, firstRule:'RuleA', bgA:'striped', targetStim:'black circle', transferStim:'blue star'},
+  {nr:18, firstRule:'RuleB', bgA:'striped', targetStim:'black circle', transferStim:'blue star'},
+  {nr:19, firstRule:'RuleA', bgA:'lightgrey', targetStim:'black circle', transferStim:'blue star'},
+  {nr:20, firstRule:'RuleB', bgA:'lightgrey', targetStim:'black circle', transferStim:'blue star'},
+  {nr:21, firstRule:'RuleA', bgA:'striped', targetStim:'white circle', transferStim:'blue star'},
+  {nr:22, firstRule:'RuleB', bgA:'striped', targetStim:'white circle', transferStim:'blue star'},
+  {nr:23, firstRule:'RuleA', bgA:'lightgrey', targetStim:'white circle', transferStim:'blue star'},
+  {nr:24, firstRule:'RuleB', bgA:'lightgrey', targetStim:'white circle', transferStim:'blue star'},
+  {nr:25, firstRule:'RuleA', bgA:'striped', targetStim:'black triangle', transferStim:'blue star'},
+  {nr:26, firstRule:'RuleB', bgA:'striped', targetStim:'black triangle', transferStim:'blue star'},
+  {nr:27, firstRule:'RuleA', bgA:'lightgrey', targetStim:'black triangle', transferStim:'blue star'},
+  {nr:28, firstRule:'RuleB', bgA:'lightgrey', targetStim:'black triangle', transferStim:'blue star'},
+  {nr:29, firstRule:'RuleA', bgA:'striped', targetStim:'white triangle', transferStim:'blue star'},
+  {nr:30, firstRule:'RuleB', bgA:'striped', targetStim:'white triangle', transferStim:'blue star'},
+  {nr:31, firstRule:'RuleA', bgA:'lightgrey', targetStim:'white triangle', transferStim:'blue star'},
+  {nr:32, firstRule:'RuleB', bgA:'lightgrey', targetStim:'white triangle', transferStim:'blue star'},
+  {nr:33, firstRule:'RuleA', bgA:'striped', targetStim:'black circle', transferStim:'yellow square'},
+  {nr:34, firstRule:'RuleB', bgA:'striped', targetStim:'black circle', transferStim:'yellow square'},
+  {nr:35, firstRule:'RuleA', bgA:'lightgrey', targetStim:'black circle', transferStim:'yellow square'},
+  {nr:36, firstRule:'RuleB', bgA:'lightgrey', targetStim:'black circle', transferStim:'yellow square'},
+  {nr:37, firstRule:'RuleA', bgA:'striped', targetStim:'white circle', transferStim:'yellow square'},
+  {nr:38, firstRule:'RuleB', bgA:'striped', targetStim:'white circle', transferStim:'yellow square'},
+  {nr:39, firstRule:'RuleA', bgA:'lightgrey', targetStim:'white circle', transferStim:'yellow square'},
+  {nr:40, firstRule:'RuleB', bgA:'lightgrey', targetStim:'white circle', transferStim:'yellow square'},
+  {nr:41, firstRule:'RuleA', bgA:'striped', targetStim:'black triangle', transferStim:'yellow square'},
+  {nr:42, firstRule:'RuleB', bgA:'striped', targetStim:'black triangle', transferStim:'yellow square'},
+  {nr:43, firstRule:'RuleA', bgA:'lightgrey', targetStim:'black triangle', transferStim:'yellow square'},
+  {nr:44, firstRule:'RuleB', bgA:'lightgrey', targetStim:'black triangle', transferStim:'yellow square'},
+  {nr:45, firstRule:'RuleA', bgA:'striped', targetStim:'white triangle', transferStim:'yellow square'},
+  {nr:46, firstRule:'RuleB', bgA:'striped', targetStim:'white triangle', transferStim:'yellow square'},
+  {nr:47, firstRule:'RuleA', bgA:'lightgrey', targetStim:'white triangle', transferStim:'yellow square'},
+  {nr:48, firstRule:'RuleB', bgA:'lightgrey', targetStim:'white triangle', transferStim:'yellow square'},
+  {nr:49, firstRule:'RuleA', bgA:'striped', targetStim:'black circle', transferStim:'blue square'},
+  {nr:50, firstRule:'RuleB', bgA:'striped', targetStim:'black circle', transferStim:'blue square'},
+  {nr:51, firstRule:'RuleA', bgA:'lightgrey', targetStim:'black circle', transferStim:'blue square'},
+  {nr:52, firstRule:'RuleB', bgA:'lightgrey', targetStim:'black circle', transferStim:'blue square'},
+  {nr:53, firstRule:'RuleA', bgA:'striped', targetStim:'white circle', transferStim:'blue square'},
+  {nr:54, firstRule:'RuleB', bgA:'striped', targetStim:'white circle', transferStim:'blue square'},
+  {nr:55, firstRule:'RuleA', bgA:'lightgrey', targetStim:'white circle', transferStim:'blue square'},
+  {nr:56, firstRule:'RuleB', bgA:'lightgrey', targetStim:'white circle', transferStim:'blue square'},
+  {nr:57, firstRule:'RuleA', bgA:'striped', targetStim:'black triangle', transferStim:'blue square'},
+  {nr:58, firstRule:'RuleB', bgA:'striped', targetStim:'black triangle', transferStim:'blue square'},
+  {nr:59, firstRule:'RuleA', bgA:'lightgrey', targetStim:'black triangle', transferStim:'blue square'},
+  {nr:60, firstRule:'RuleB', bgA:'lightgrey', targetStim:'black triangle', transferStim:'blue square'},
+  {nr:61, firstRule:'RuleA', bgA:'striped', targetStim:'white triangle', transferStim:'blue square'},
+  {nr:62, firstRule:'RuleB', bgA:'striped', targetStim:'white triangle', transferStim:'blue square'},
+  {nr:63, firstRule:'RuleA', bgA:'lightgrey', targetStim:'white triangle', transferStim:'blue square'},
+  {nr:64, firstRule:'RuleB', bgA:'lightgrey', targetStim:'white triangle', transferStim:'blue square'},
 ];
-
-function hashStr(s) {
-  let h = 0;
-  for (let i = 0; i < s.length; i++) h = (Math.imul(31, h) + s.charCodeAt(i)) | 0;
-  return Math.abs(h);
-}
 
 // ─── Audio ───────────────────────────────────────────────────────
 
@@ -371,6 +446,20 @@ function noRepeat(t) {
   return t;
 }
 
+function sameLayout(a, b) {
+  return a && b && a.leftShape===b.leftShape && a.leftColor===b.leftColor &&
+    a.rightShape===b.rightShape && a.rightColor===b.rightColor;
+}
+
+// Avoid repeating the very last trial shown (previous session/phase) as the
+// first trial of a new session, unless no alternative exists.
+function avoidBoundaryRepeat(trials, lastLayout) {
+  if (!lastLayout || !trials.length || !sameLayout(trials[0], lastLayout)) return trials;
+  const i = trials.findIndex((t, idx) => idx > 0 && !sameLayout(t, lastLayout));
+  if (i > 0) [trials[0], trials[i]] = [trials[i], trials[0]];
+  return trials;
+}
+
 function maxSideStreak(t, max=3) {
   t = [...t];
   for (let a=0; a<1000; a++) {
@@ -452,37 +541,102 @@ function buildRuleB(n, tS, oS, tC, oC) {
   return pool;
 }
 
-// Preserve block structure: first-rule block then second-rule block (each internally balanced)
-function buildAlternate(n, tS, oS, tC, oC, start) {
+// Randomly-rewarded variants used for test group 2's second rule: same trial
+// layouts as buildRuleA/buildRuleB, but the rewarded stimulus for each
+// pairing-type is chosen 50/50 at random instead of being fixed by the rule.
+function _randomizeReward(pool, pairKeys) {
+  for (const key of pairKeys) {
+    const idxs = pool.map((t,i)=>({t,i})).filter(x=>x.t._pairKey===key).map(x=>x.i);
+    shuffle(idxs);
+    idxs.slice(0, Math.floor(idxs.length/2)).forEach(i => {
+      pool[i].correctSide = pool[i].correctSide==='left' ? 'right' : 'left';
+    });
+  }
+  pool.forEach(t => delete t._pairKey);
+  return pool;
+}
+
+function buildRuleARandom(n, tS, oS, tC, oC) {
+  n = quad(n);
+  const quarter = n / 4;
+  let pool = [];
+  for (const cs of ['left', 'right']) {
+    for (const ts of [tS, oS]) {
+      const os = ts===tS ? oS : tS;
+      const [ls,rs,lc,rc] = cs==='left' ? [ts,os,tC,oC] : [os,ts,oC,tC];
+      for (let i=0; i<quarter; i++)
+        pool.push({ rule:'RuleA', leftShape:ls, leftColor:lc, rightShape:rs, rightColor:rc, correctSide:cs, _pairKey:ts });
+    }
+  }
+  pool = _randomizeReward(pool, [tS, oS]);
+  shuffle(pool);
+  pool = noRepeat(pool);
+  pool = maxSideStreak(pool, 3);
+  return pool;
+}
+
+function buildRuleBRandom(n, tS, oS, tC, oC) {
+  n = quad(n);
+  const quarter = n / 4;
+  let pool = [];
+  for (const cs of ['left', 'right']) {
+    for (const tc of [tC, oC]) {
+      const oc = tc===tC ? oC : tC;
+      const [ls,rs,lc,rc] = cs==='left' ? [tS,oS,tc,oc] : [oS,tS,oc,tc];
+      for (let i=0; i<quarter; i++)
+        pool.push({ rule:'RuleB', leftShape:ls, leftColor:lc, rightShape:rs, rightColor:rc, correctSide:cs, _pairKey:tc });
+    }
+  }
+  pool = _randomizeReward(pool, [tC, oC]);
+  shuffle(pool);
+  pool = noRepeat(pool);
+  pool = maxSideStreak(pool, 3);
+  return pool;
+}
+
+function buildRule(rule, n, tS, oS, tC, oC, random) {
+  if (rule === 'RuleA') return random ? buildRuleARandom(n,tS,oS,tC,oC) : buildRuleA(n,tS,oS,tC,oC);
+  return random ? buildRuleBRandom(n,tS,oS,tC,oC) : buildRuleB(n,tS,oS,tC,oC);
+}
+
+// Preserve block structure: first-rule block then second-rule block (each internally balanced).
+// randomRule (if set) is built with random rewarding instead of the real rule (test group 2).
+function buildAlternate(n, tS, oS, tC, oC, start, randomRule) {
   n = quad(n); const h = n/2;
-  const a = buildRuleA(h, tS, oS, tC, oC);
-  const b = buildRuleB(h, tS, oS, tC, oC);
+  const a = buildRule('RuleA', h, tS, oS, tC, oC, randomRule==='RuleA');
+  const b = buildRule('RuleB', h, tS, oS, tC, oC, randomRule==='RuleB');
   return start==='RuleA' ? [...a,...b] : [...b,...a];
 }
 
-function buildMixed(n, tS, oS, tC, oC) {
+function buildMixed(n, tS, oS, tC, oC, randomRule) {
   n = quad(n); const h = n/2;
-  let t = shuffle([...buildRuleA(h,tS,oS,tC,oC), ...buildRuleB(h,tS,oS,tC,oC)]);
+  let t = shuffle([
+    ...buildRule('RuleA', h, tS, oS, tC, oC, randomRule==='RuleA'),
+    ...buildRule('RuleB', h, tS, oS, tC, oC, randomRule==='RuleB'),
+  ]);
   t = maxRuleStreak(t, 3);
   t = noRepeat(t);
   t = maxSideStreak(t, 3);
   return t;
 }
 
-function buildPhase(phase, n, tS, oS, tC, oC, firstRule, xS, xoS, xC, xoC) {
+function buildPhase(phase, n, tS, oS, tC, oC, firstRule, xS, xoS, xC, xoC, testGroup) {
+  const secondRule = firstRule==='RuleA' ? 'RuleB' : 'RuleA';
+  const randomRule = testGroup==='group2' ? secondRule : null;
   if (phase==='RuleA')               return buildRuleA(n, tS, oS, tC, oC);
   if (phase==='RuleB')               return buildRuleB(n, tS, oS, tC, oC);
-  if (phase==='Alternate')           return buildAlternate(n, tS, oS, tC, oC, firstRule);
-  if (phase==='Mixed')               return buildMixed(n, tS, oS, tC, oC);
-  if (phase==='AlternatingTransfer') return buildAlternate(n, xS, xoS, xC, xoC, firstRule);
-  if (phase==='MixedTransfer')       return buildMixed(n, xS, xoS, xC, xoC);
+  if (phase==='Rule2Random')         return buildRule(secondRule, n, tS, oS, tC, oC, true);
+  if (phase==='Alternate')           return buildAlternate(n, tS, oS, tC, oC, firstRule, randomRule);
+  if (phase==='Mixed')               return buildMixed(n, tS, oS, tC, oC, randomRule);
+  if (phase==='AlternatingTransfer') return buildAlternate(n, xS, xoS, xC, xoC, firstRule, randomRule);
+  if (phase==='MixedTransfer')       return buildMixed(n, xS, xoS, xC, xoC, randomRule);
   return [];
 }
 
 // ─── CSV log ──────────────────────────────────────────────────────
 
 const CSV_COLS = [
-  'subjectID','date','time','phase','phase_count','session_count',
+  'subjectID','test_group','date','time','phase','phase_count','session_count',
   'trial_count','target_color','target_shape','bg_shown','rule',
   'left_shape','left_color','right_shape','right_color',
   'commonSp','left_stim','right_stim','trial_type',
@@ -531,25 +685,78 @@ function uploadToGDrive(csvLog) {
   } catch(e) {}
 }
 
+// ─── Test group / counterbalance assignment ───────────────────────
+//
+// Each of the 64 COUNTERBALANCING conditions should be used at least once
+// per test group before repeating, and group1/group2 should be assigned in
+// roughly alternating fashion across participants. Both require state that
+// persists across separate browser sessions/devices, so the preferred path
+// is a small server-side assignment tracker (see docs/apps-script/
+// assignment.gs). If ASSIGN_URL isn't set (or the request fails), we fall
+// back to a per-browser localStorage record — not shared across devices,
+// but still avoids repeats within one machine's testing.
+
+async function requestAssignment(idCode) {
+  if (!ASSIGN_URL) return null;
+  try {
+    const resp = await fetch(`${ASSIGN_URL}?action=assign&id=${encodeURIComponent(idCode)}`);
+    if (!resp.ok) return null;
+    const data = await resp.json();
+    if (!data || !data.test_group || !data.nr) return null;
+    return data;
+  } catch (e) { return null; }
+}
+
+function pickLocalTestGroup() {
+  const g1 = Number(localStorage.getItem('groupCount_group1') || 0);
+  const g2 = Number(localStorage.getItem('groupCount_group2') || 0);
+  const group = g1 <= g2 ? 'group1' : 'group2';
+  localStorage.setItem(`groupCount_${group}`, String((group==='group1' ? g1 : g2) + 1));
+  return group;
+}
+
+function pickLocalCondition(testGroup) {
+  const key = `usedConditions_${testGroup}`;
+  let used = JSON.parse(localStorage.getItem(key) || '[]');
+  if (used.length >= COUNTERBALANCING.length) used = [];
+  const remaining = COUNTERBALANCING.map(c => c.nr).filter(nr => !used.includes(nr));
+  const nr = remaining[Math.floor(Math.random() * remaining.length)];
+  used.push(nr);
+  localStorage.setItem(key, JSON.stringify(used));
+  return nr;
+}
+
+async function assignTestGroupAndCondition(idCode) {
+  const remote = await requestAssignment(idCode);
+  if (remote) return remote;
+  const test_group = pickLocalTestGroup();
+  const nr = pickLocalCondition(test_group);
+  return { test_group, nr };
+}
+
 // ─── Settings builder ─────────────────────────────────────────────
 
-function buildSettings(identifierCode) {
-  const cb = COUNTERBALANCING[hashStr(identifierCode) % COUNTERBALANCING.length];
+function buildSettings(identifierCode, assignment) {
+  const cb = COUNTERBALANCING.find(c => c.nr === assignment.nr) ?? COUNTERBALANCING[0];
+  const testGroup = assignment.test_group;
   const firstRule = cb.firstRule;
+  const secondRule = firstRule === 'RuleA' ? 'RuleB' : 'RuleA';
   const bgA       = cb.bgA;
   const bgB       = bgA === 'lightgrey' ? 'striped' : 'lightgrey';
   const [tC, tS]  = cb.targetStim.split(' ');
   const [xC, xS]  = cb.transferStim.split(' ');
 
-  // No PreTraining for web version
-  const phases = [
-    ...(firstRule==='RuleA' ? ['RuleA','RuleB'] : ['RuleB','RuleA']),
-    'Alternate', 'Mixed', 'AlternatingTransfer', 'MixedTransfer',
-  ];
+  // No PreTraining for web version.
+  // Group 2 replaces normal rule-2 training with two random-rewarding
+  // sessions on whichever rule was learned second (see buildPhase()).
+  const phases = testGroup === 'group2'
+    ? [firstRule, 'Rule2Random', 'Alternate', 'Mixed', 'AlternatingTransfer', 'MixedTransfer']
+    : [firstRule, secondRule,    'Alternate', 'Mixed', 'AlternatingTransfer', 'MixedTransfer'];
 
   return {
     individualId:  identifierCode,
-    firstRule, bgA, bgB,
+    testGroup,
+    firstRule, secondRule, bgA, bgB,
     ruleBg: { RuleA:bgA, RuleB:bgB },
     tgtColor:tC, tgtShape:tS, othColor:OPPOSITE[tC], othShape:OPPOSITE[tS],
     xfrTgtColor:xC, xfrTgtShape:xS, xfrOthColor:OPPOSITE[xC], xfrOthShape:OPPOSITE[xS],
@@ -570,6 +777,7 @@ let _trialCount        = 0;
 let _correction        = 0;
 let _correctT1         = 0;
 let _correctT2         = 0;
+let _scoreByRule       = { RuleA:{1:0,2:0}, RuleB:{1:0,2:0} };
 let _current           = null;
 let _erTrials          = [];
 let _erIdx             = 0;
@@ -578,6 +786,7 @@ let _erBg              = 'black';
 let _respStart         = 0;
 let _toTimer           = null;
 let _accepting         = false;
+let _lastLayout        = null;
 
 function showScreen(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
@@ -586,6 +795,12 @@ function showScreen(id) {
 
 function setTaskBg(name) {
   document.getElementById('screen-task').style.background = BG_CSS[name] ?? '#000';
+}
+
+function flashGreen(duration = GREEN_FLASH_MS) {
+  const el = document.getElementById('flash-overlay');
+  el.classList.add('active');
+  setTimeout(() => el.classList.remove('active'), duration);
 }
 
 // ─── Phase / session ──────────────────────────────────────────────
@@ -599,8 +814,9 @@ function curStimuli() {
     : [_s.tgtShape, _s.othShape, _s.tgtColor, _s.othColor];
 }
 
-function startSession(identifierCode) {
-  _s   = buildSettings(identifierCode);
+async function startSession(identifierCode) {
+  const assignment = await assignTestGroupAndCondition(identifierCode);
+  _s   = buildSettings(identifierCode, assignment);
   _csv = new CsvLog(identifierCode);
   _phaseIdx = 0; _phaseSessionCount = 0;
   beginPhase();
@@ -613,10 +829,11 @@ function beginPhase() {
   _phaseSessionCount++;
   _trialIdx=0; _trialCount=0; _correction=0;
   _correctT1=0; _correctT2=0;
+  _scoreByRule = { RuleA:{1:0,2:0}, RuleB:{1:0,2:0} };
 
   const [tS,oS,tC,oC] = curStimuli();
   _trials = buildPhase(phase, _s.nTrials, tS, oS, tC, oC, _s.firstRule,
-    _s.xfrTgtShape, _s.xfrOthShape, _s.xfrTgtColor, _s.xfrOthColor);
+    _s.xfrTgtShape, _s.xfrOthShape, _s.xfrTgtColor, _s.xfrOthColor, _s.testGroup);
 
   // First regular trial after ER: type-2 for transfer, type-1 for all others
   if (isXfr(phase)) {
@@ -624,6 +841,7 @@ function beginPhase() {
   } else {
     moveType1First(_trials, curStimuli()[0], curStimuli()[2]);
   }
+  avoidBoundaryRepeat(_trials, _lastLayout);
 
   _inER = true;
   _erTrials = shuffle([...Array(ER_REPS).fill('left'), ...Array(ER_REPS).fill('right')])
@@ -631,6 +849,7 @@ function beginPhase() {
   _erIdx = 0;
 
   showScreen('screen-task');
+  flashGreen();
   nextTrial();
 }
 
@@ -667,6 +886,8 @@ function showER() {
 function showTrial() {
   const tr=_current, phase=curPhase();
   setTaskBg(_s.ruleBg[tr.rule]);
+  if (_correction === 0 && Math.random() < GREEN_FLASH_RANDOM_CHANCE) flashGreen();
+  _lastLayout = { leftShape:tr.leftShape, leftColor:tr.leftColor, rightShape:tr.rightShape, rightColor:tr.rightColor };
   renderShape(document.getElementById('svg-left'),  tr.leftShape,  tr.leftColor,  true);
   renderShape(document.getElementById('svg-right'), tr.rightShape, tr.rightColor, true);
   document.getElementById('btn-left').classList.remove('hidden');
@@ -703,7 +924,10 @@ function respond(side, shape, color) {
 
   // Score first attempts only (no corrections, no ER)
   if (!_inER && _correction===0) {
-    if (correct) { if(trialType===1) _correctT1++; else _correctT2++; }
+    if (correct) {
+      if (trialType===1) _correctT1++; else _correctT2++;
+      if (tr.rule && _scoreByRule[tr.rule]) _scoreByRule[tr.rule][trialType]++;
+    }
   }
 
   // Log ALL trials (ER and regular)
@@ -724,7 +948,7 @@ function respond(side, shape, color) {
 
     const now = new Date();
     _csv.write({
-      subjectID: _s.individualId, date:fmtDate(now), time:fmtTimeColon(now),
+      subjectID: _s.individualId, test_group: _s.testGroup, date:fmtDate(now), time:fmtTimeColon(now),
       phase, phase_count:_phaseIdx+1, session_count:_phaseSessionCount,
       trial_count: _inER ? 0 : _trialCount,
       target_color:_s.tgtColor, target_shape:_s.tgtShape,
@@ -772,28 +996,69 @@ function advance() { if(_inER) _erIdx++; else _trialIdx++; nextTrial(); }
 
 // ─── Session end ──────────────────────────────────────────────────
 
-function evaluateSession() {
-  const phase = curPhase();
-  // Criterion: 10 out of 12 trials per trial type (scales with nTrials)
-  const crit = Math.round(_s.nTrials / 2 * 10 / 12);
-  const met  = _correctT1 >= crit && _correctT2 >= crit;
-  if (met) { _phaseIdx++; _phaseSessionCount = 0; }
-
-  const next = _s.phases[_phaseIdx] ?? 'Done';
-  const outcome = met ? `Next: ${next}` : 'Repeating session…';
-
-  document.getElementById('end-msg').textContent =
-    `Score: ${_correctT1+_correctT2} / ${_s.nTrials}\n\n${met?'Criterion reached!':'Criterion not reached.'}\n\n${outcome}`;
-  document.getElementById('btn-continue').textContent = met ? 'Continue' : 'Repeat';
-
+function finishSessionScreen(msg, btnLabel) {
+  document.getElementById('end-msg').textContent = msg;
+  document.getElementById('btn-continue').textContent = btnLabel;
   uploadToGDrive(_csv);   // save snapshot after every session, not just at the end
   showScreen('screen-end');
 }
 
-function endExperiment() {
-  // Upload data to Google Drive, then show completion screen
+function evaluateSession() {
+  const phase = curPhase();
+  const xfr   = isXfr(phase);
+
+  // Rule2Random (test group 2 only): exactly 2 sessions required, no criterion
+  if (phase === 'Rule2Random' && _phaseSessionCount < 2) {
+    finishSessionScreen(`Session ${_phaseSessionCount} of 2 complete.\n\nContinuing…`, 'Continue');
+    return;
+  }
+
+  // Criterion: 10 out of 12 trials per trial type (scales with nTrials).
+  // Group 2 in Alternate/Mixed sessions is only held to criterion on rule 1
+  // (their "rule 2" trials are randomly rewarded and have no learnable answer).
+  let met;
+  if (_s.testGroup === 'group2' && (phase === 'Alternate' || phase === 'Mixed')) {
+    const ruleCrit = Math.round(_s.nTrials / 4 * 10 / 12);
+    const s = _scoreByRule[_s.firstRule];
+    met = s[1] >= ruleCrit && s[2] >= ruleCrit;
+  } else {
+    const crit = Math.round(_s.nTrials / 2 * 10 / 12);
+    met = _correctT1 >= crit && _correctT2 >= crit;
+  }
+
+  // Criterion reached, or a no-criterion phase (transfer / Rule2Random) has finished its mandatory session(s)
+  if (met || xfr || phase === 'Rule2Random') {
+    _phaseIdx++; _phaseSessionCount = 0;
+    const next = _s.phases[_phaseIdx] ?? null;
+    if (!next) { completeExperiment('done'); return; }
+    finishSessionScreen(
+      `Score: ${_correctT1+_correctT2} / ${_s.nTrials}\n\n${met?'Criterion reached!':'Session complete.'}\n\nNext: ${next}`,
+      'Continue');
+    return;
+  }
+
+  // Criterion not reached — stop after the 5th session of a phase
+  if (_phaseSessionCount >= MAX_SESSIONS_PER_PHASE) {
+    completeExperiment('capped');
+    return;
+  }
+
+  finishSessionScreen(
+    `Score: ${_correctT1+_correctT2} / ${_s.nTrials}\n\nCriterion not reached.\n\nRepeating session… (${_phaseSessionCount}/${MAX_SESSIONS_PER_PHASE})`,
+    'Repeat');
+}
+
+function completeExperiment(reason) {
+  const msgEl = document.getElementById('complete-msg');
+  msgEl.innerHTML = reason === 'capped'
+    ? 'This task has ended.<br><br>Please continue to the next page to answer a few last questions.'
+    : 'This task has been completed.<br><br>Please continue to the next page to answer a few last questions.';
   uploadToGDrive(_csv);
   showScreen('screen-complete');
+}
+
+function endExperiment() {
+  completeExperiment('done');
 }
 
 // ─── Input handling ───────────────────────────────────────────────
@@ -816,15 +1081,21 @@ document.addEventListener('keydown', e => {
 
 // ─── Wiring: ID entry screen ──────────────────────────────────────
 
-document.getElementById('id-start-btn').addEventListener('click', () => {
+document.getElementById('id-start-btn').addEventListener('click', async () => {
   const code = document.getElementById('id-input').value.trim();
   const errEl = document.getElementById('id-error');
+  const startBtn = document.getElementById('id-start-btn');
   if (!code || !/^[a-zA-Z0-9]+$/.test(code)) {
     errEl.textContent = 'Please enter a valid alphanumeric code (letters and numbers only).';
     return;
   }
   errEl.textContent = '';
-  startSession(code);
+  startBtn.disabled = true;
+  try {
+    await startSession(code);
+  } finally {
+    startBtn.disabled = false;
+  }
 });
 
 document.getElementById('id-input').addEventListener('keydown', e => {
