@@ -126,15 +126,6 @@
     .shape-btn.anim-correct { animation: btn-correct 0.35s ease-out forwards; }
     .shape-btn.anim-wrong   { animation: btn-wrong   0.18s ease-out forwards; }
 
-    #flash-overlay {
-      position: absolute; inset: 0;
-      background: #00ff80;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.15s ease-out;
-    }
-    #flash-overlay.active { opacity: 0.85; }
-
     /* ── Session-end screen ────────────────────────────────────────── */
     #screen-end {
       flex-direction: column;
@@ -216,7 +207,6 @@
   <button class="shape-btn" id="btn-right">
     <svg id="svg-right" viewBox="0 0 100 100"></svg>
   </button>
-  <div id="flash-overlay"></div>
 </div>
 
 <!-- ── Session-end screen ────────────────────────────────────────── -->
@@ -261,11 +251,6 @@ const FEEDBACK_MS        = 800;
 const ITI_CORRECT_MS     = 200;
 const N_TRIALS           = 24;
 const MAX_SESSIONS_PER_PHASE = 5;
-
-// Green "get ready" flash: once at the start of every session, plus occasionally
-// at the start of a regular trial. Exact look/timing pending reference video.
-const GREEN_FLASH_MS            = 250;
-const GREEN_FLASH_RANDOM_CHANCE = 0.12;
 
 const OPPOSITE = {
   black:'white', white:'black', blue:'yellow', yellow:'blue',
@@ -797,12 +782,6 @@ function setTaskBg(name) {
   document.getElementById('screen-task').style.background = BG_CSS[name] ?? '#000';
 }
 
-function flashGreen(duration = GREEN_FLASH_MS) {
-  const el = document.getElementById('flash-overlay');
-  el.classList.add('active');
-  setTimeout(() => el.classList.remove('active'), duration);
-}
-
 // ─── Phase / session ──────────────────────────────────────────────
 
 function curPhase() { return _s.phases[_phaseIdx] ?? null; }
@@ -849,7 +828,6 @@ function beginPhase() {
   _erIdx = 0;
 
   showScreen('screen-task');
-  flashGreen();
   nextTrial();
 }
 
@@ -886,7 +864,6 @@ function showER() {
 function showTrial() {
   const tr=_current, phase=curPhase();
   setTaskBg(_s.ruleBg[tr.rule]);
-  if (_correction === 0 && Math.random() < GREEN_FLASH_RANDOM_CHANCE) flashGreen();
   _lastLayout = { leftShape:tr.leftShape, leftColor:tr.leftColor, rightShape:tr.rightShape, rightColor:tr.rightColor };
   renderShape(document.getElementById('svg-left'),  tr.leftShape,  tr.leftColor,  true);
   renderShape(document.getElementById('svg-right'), tr.rightShape, tr.rightColor, true);
