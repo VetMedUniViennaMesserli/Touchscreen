@@ -14,6 +14,8 @@ import random
 import sys
 from datetime import datetime
 
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+
 from Framework.ShapeButton import ShapeButton
 from Framework.TrainingWindow import TrainingWindow
 from Framework.SessionConfig import SessionConfig

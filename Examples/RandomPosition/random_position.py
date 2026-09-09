@@ -1,3 +1,7 @@
+import os
+import sys
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+
 from Framework.ImageButton import ImageButton
 from Framework.TrainingWindow import TrainingWindow
 from Framework.TrainingStimulus import TrainingStimulus
@@ -7,9 +11,7 @@ from Framework.paths import get_app_root
 from PySide6.QtWidgets import QApplication, QGridLayout, QWidget, QHBoxLayout
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor
-import sys
 import random
-import os
 
 class RandomPositionTraining(TrainingWindow):
     def startFirstTrial(self):
