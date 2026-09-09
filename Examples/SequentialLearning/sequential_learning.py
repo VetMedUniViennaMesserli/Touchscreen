@@ -72,8 +72,7 @@ def createTouchscreenWindow(sessionEndCallback=None):
                                   errorScreenColor=QColor(255,0,0,255),
                                   successSoundFilePath=os.path.join(get_app_root(),"SoundEffects", "600hz.wav"),
                                   failureSoundFilePath=os.path.join(get_app_root(),"SoundEffects", "200hz.wav"),
-                                  cursorVisible=True,
-                                  trainingName="Sequential Learning")
+                                  cursorVisible=True)
 
     trainingWindow = SequentialLearningTraining(sessionConfig, sessionEndCallback=sessionEndCallback)
     trainingWindow.startFirstTrial()

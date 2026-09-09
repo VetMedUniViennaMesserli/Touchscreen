@@ -17,6 +17,20 @@ def get_app_root() -> str:
         return os.path.dirname(os.path.abspath(main.__file__))
     return os.getcwd()
 
+def get_app_name() -> str:
+    """Return the running app/example's own name (its folder's name, e.g.
+    'RuleLearning' or 'TwoImages'), in both normal and frozen modes.
+
+    Used as the default SessionLogs subfolder name so copying/renaming an
+    app folder can't leave a stale, hand-typed trainingName behind.
+    """
+    if getattr(sys, 'frozen', False):
+        return os.path.splitext(os.path.basename(sys.executable))[0]
+    main = sys.modules.get('__main__')
+    if main is not None and hasattr(main, '__file__'):
+        return os.path.basename(os.path.dirname(os.path.abspath(main.__file__)))
+    return 'UnknownApp'
+
 def get_log_root() -> str:
     """Return the directory where SessionLogs/ should be created.
 

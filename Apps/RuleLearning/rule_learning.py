@@ -1207,7 +1207,6 @@ def createTouchscreenWindow(sessionEndCallback=None):
         successSoundFilePath=os.path.join(get_app_root(), "SoundEffects", "600hz.wav"),
         failureSoundFilePath=os.path.join(get_app_root(), "SoundEffects", "200hz.wav"),
         cursorVisible=True,
-        trainingName=f"Rule_Learning_{s['individual_id']}",
     )
 
     w = RuleLearningTraining(

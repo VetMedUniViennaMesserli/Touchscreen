@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import Optional
 
 @dataclass
 class SessionConfig:
@@ -12,4 +13,8 @@ class SessionConfig:
     successSoundFilePath: str
     failureSoundFilePath: str
     cursorVisible: bool
-    trainingName: str
+    # Defaults to the running app's own folder name (see
+    # Framework.paths.get_app_name()) if not set explicitly — only pass
+    # this if an app genuinely needs a SessionLogs folder name that
+    # differs from its own folder name.
+    trainingName: Optional[str] = None
