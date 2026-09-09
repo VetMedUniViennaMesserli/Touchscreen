@@ -1,0 +1,89 @@
+name: Build release binaries
+
+# Builds a standalone executable for every real app under Apps/ (not
+# Examples/ — those aren't real apps, see RESTRUCTURE_PLAN.md) on every
+# target platform, then attaches them to the GitHub Release for that tag
+# (creating the Release if it doesn't already exist).
+#
+# PyInstaller cannot cross-compile, so each platform needs its own runner:
+# ubuntu-latest (Linux), windows-latest (Windows 11), macos-14 (Apple
+# Silicon/arm64), macos-13 (Intel/x64).
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: linux
+          - os: windows-latest
+            platform: windows
+          - os: macos-14
+            platform: macos-arm64
+          - os: macos-13
+            platform: macos-x64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Build every app under Apps/
+        shell: bash
+        run: |
+          SEP=":"
+          [ "${{ runner.os }}" = "Windows" ] && SEP=";"
+          mkdir -p dist
+          for dir in Apps/*/; do
+            name="$(basename "$dir")"
+            entry="$(find "$dir" -maxdepth 1 -name '*.py' | sort | head -n1)"
+            [ -n "$entry" ] || continue
+
+            add_data=()
+            [ -d "${dir}Training_Stimuli" ] && add_data+=(--add-data "${dir}Training_Stimuli${SEP}Training_Stimuli")
+            [ -d "${dir}SoundEffects" ]     && add_data+=(--add-data "${dir}SoundEffects${SEP}SoundEffects")
+
+            pyinstaller \
+              "${add_data[@]}" \
+              --paths . \
+              --distpath dist \
+              --workpath build \
+              --specpath . \
+              --name "${name}-${{ matrix.platform }}" \
+              --windowed \
+              --onefile \
+              "$entry"
+          done
+
+      - name: Zip any app bundles (macOS produces .app directories)
+        shell: bash
+        run: |
+          cd dist
+          for f in *; do
+            if [ -d "$f" ]; then
+              zip -r -q "${f%.app}.zip" "$f"
+              rm -rf "$f"
+            fi
+          done
+
+      - name: Attach binaries to the release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          generate_release_notes: true
