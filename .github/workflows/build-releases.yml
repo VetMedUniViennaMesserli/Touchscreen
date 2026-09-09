@@ -6,8 +6,11 @@ name: Build release binaries
 # (creating the Release if it doesn't already exist).
 #
 # PyInstaller cannot cross-compile, so each platform needs its own runner:
-# ubuntu-latest (Linux), windows-latest (Windows 11), macos-14 (Apple
-# Silicon/arm64), macos-13 (Intel/x64).
+# ubuntu-latest (Linux), windows-latest (Windows 11), macos-15 (Apple
+# Silicon/arm64), macos-15-intel (Intel/x64). Check
+# https://github.com/actions/runner-images for current image/label names
+# if these ever stop being offered — GitHub retires hosted macOS images
+# fairly quickly (macos-13 was fully removed, macos-14 is deprecated).
 on:
   push:
     tags:
@@ -32,9 +35,9 @@ jobs:
             platform: linux
           - os: windows-latest
             platform: windows
-          - os: macos-14
+          - os: macos-15
             platform: macos-arm64
-          - os: macos-13
+          - os: macos-15-intel
             platform: macos-x64
     runs-on: ${{ matrix.os }}
     steps:
