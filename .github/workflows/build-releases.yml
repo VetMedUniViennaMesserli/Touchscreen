@@ -84,11 +84,17 @@ jobs:
       - name: Zip any app bundles (macOS produces .app directories)
         shell: bash
         run: |
+          # macOS --onefile --windowed produces BOTH a bare Mach-O binary
+          # and a .app bundle wrapping it. Ship only the zipped .app (the
+          # one people expect to double-click) and drop the redundant bare
+          # binary so there's exactly one download per platform.
           cd dist
           for f in *; do
             if [ -d "$f" ]; then
-              zip -r -q "${f%.app}.zip" "$f"
+              base="${f%.app}"
+              zip -r -q "${base}.zip" "$f"
               rm -rf "$f"
+              [ -f "$base" ] && rm -f "$base"
             fi
           done
 
