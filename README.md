@@ -1,16 +1,32 @@
 # Touch screen learning tool
 
-A touchscreen-based cognitive training system built with PySide6/Qt. Designed for deployment on a Raspberry Pi with a touchscreen and optionally a second monitor.
+A touchscreen-based cognitive training framework built with PySide6/Qt. Designed for deployment on a Raspberry Pi (or any Linux PC) with a touchscreen and optionally a second monitor — one app per machine, e.g. one PC running Rule Learning at a pig facility, another running a different app at a bird facility.
 
-## Quick install / uninstall (Linux)
+The repo is a monorepo with three top-level parts:
 
-Clones the repo, sets up the virtual environment, and enables the systemd autostart service in one command:
+- **`Framework/`** — the shared engine (window management, session logging, trial timing, ...) that every app is built on.
+- **`Apps/`** — real, deployable, versioned research apps (currently: `RuleLearning`). This is what `install.sh`'s app picker offers.
+- **`Examples/`** — reference implementations (Two Images, Go/No-Go, Matching to Sample, Random Position, Sequential Learning, Two Images Keyboard). These are **not** real apps — they're teaching material and starting-point templates for building new apps (including with AI-agent assistance), and are never offered by the installer.
+
+## Quick install (Linux)
+
+Clones the repo, pins it to the latest release tag, sets up the virtual environment, and enables the systemd autostart service:
 
 ```bash
 bash <(curl -sSL https://raw.githubusercontent.com/VetMedUniViennaMesserli/Touchscreen/main/install.sh)
 ```
 
-The script asks whether to **Install / Update** or **Uninstall** each time it runs. Run the same command again to update or to remove the installation completely.
+It asks once which app (from `Apps/`) should run on this machine, and whether to **Install** or **Uninstall**.
+
+## Updating
+
+Once installed, run `update.sh` from within the install directory whenever a new release is ready:
+
+```bash
+~/Touchscreen/update.sh
+```
+
+This only ever moves to the newest release tag (never unreleased commits on `main`), reinstalls dependencies only if `requirements.txt` changed, restarts the service, and — unlike `install.sh` — never re-asks which app to run.
 
 ## Running
 
@@ -21,30 +37,31 @@ cd ~/Touchscreen
 ./touchscreen.sh
 ```
 
-The script reads the active training from `.selected_app` (written by the installer). To change it without re-running the installer, edit that file directly:
+The script reads the active app from `.selected_app` (written by the installer). To change it without reinstalling, edit that file directly:
 
 ```bash
-echo "App/Trainings/rule_learning.py" > ~/Touchscreen/.selected_app
+echo "Apps/RuleLearning/rule_learning.py" > ~/Touchscreen/.selected_app
 ```
 
-To run a specific training directly without changing the configuration:
+To run a specific app or example directly without changing the configuration:
 
 ```bash
 cd ~/Touchscreen
 source venv/bin/activate
-PYTHONPATH=App python App/Trainings/two_images.py
+PYTHONPATH=. python Apps/RuleLearning/rule_learning.py
 ```
 
 Press `Escape` or `Q` to quit any training.
 
 ## Manual installation
 
-Clone the repo into your home directory (the systemd service expects it there):
+Clone the repo into your home directory (the systemd service expects it there), then check out a release tag:
 
 ```bash
 cd ~
 git clone https://github.com/VetMedUniViennaMesserli/Touchscreen.git Touchscreen
 cd Touchscreen
+git checkout "$(git tag -l 'v*' --sort=-v:refname | head -n1)"
 python -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
@@ -71,13 +88,15 @@ systemctl --user start touchscreen.service
 bash build.sh
 ```
 
-Standalone binaries are placed in `dist/`. Requires the venv to be set up first.
+Standalone binaries are placed in `dist/`, one per app/example, named after its folder (e.g. `dist/RuleLearning`). Requires the venv to be set up first.
 
 Session logs are written to `dist/SessionLogs/` when running a built binary.
 
-## Trainings
+## Examples
 
-### Two images (`two_images.py`)
+The following are reference implementations under `Examples/`, not deployable apps — see the note at the top of this file. Each is self-contained with its own `Training_Stimuli/`/`SoundEffects/`.
+
+### Two images (`Examples/TwoImages/two_images.py`)
 
 Two images are shown side by side — one from the **Paintings** category (correct) and one from the **Underwater** category (wrong). Their left/right position is randomised each trial. The individual must touch the painting. Feedback: success sound + inter-trial interval on correct; error sound + red screen on wrong.
 
@@ -85,7 +104,7 @@ Input: touchscreen.
 
 ---
 
-### Two images — keyboard (`two_images_keyboard_input.py`)
+### Two images — keyboard (`Examples/TwoImagesKeyboard/two_images_keyboard_input.py`)
 
 Identical to Two images but responds to key presses instead of touch. Press **A** to select the left image, **D** to select the right image. Compatible with the Raspberry Pi Pico W hardware button box (`Devices/Keyboard/`).
 
@@ -93,7 +112,7 @@ Input: keyboard (A / D).
 
 ---
 
-### Go / No-Go (`go_nogo.py`)
+### Go / No-Go (`Examples/GoNoGo/go_nogo.py`)
 
 A single image is shown for up to **2 seconds**. The individual should touch it if it is a Painting (Go trial) and withhold if it is an Underwater image (No-Go trial). Not touching within the timeout counts as a correct No-Go response; touching a No-Go stimulus or not touching a Go stimulus counts as an error.
 
@@ -101,7 +120,7 @@ Input: touchscreen.
 
 ---
 
-### Matching to sample (`matching_to_sample.py`)
+### Matching to sample (`Examples/MatchingToSample/matching_to_sample.py`)
 
 A sample geometric shape is shown alone for **1 second**, then replaced by two choice shapes. The individual must touch the shape that matches the sample. Stimuli are drawn from `Training_Stimuli/Geometric_Shapes/`.
 
@@ -109,7 +128,7 @@ Input: touchscreen.
 
 ---
 
-### Random position (`random_position.py`)
+### Random position (`Examples/RandomPosition/random_position.py`)
 
 A single geometric shape is placed at a random position in a **5 × 4 grid**. The individual must touch it regardless of where it appears. Trains position-independent stimulus recognition.
 
@@ -117,7 +136,7 @@ Input: touchscreen.
 
 ---
 
-### Sequential learning (`sequential_learning.py`)
+### Sequential learning (`Examples/SequentialLearning/sequential_learning.py`)
 
 Eight identical red circles are arranged in a U-shape across a **2 × 4 grid**. The individual must touch them in a fixed order (bottom row left-to-right, then top row right-to-left). Each correctly touched circle disappears; touching the wrong one triggers an error.
 
@@ -125,7 +144,11 @@ Input: touchscreen.
 
 ---
 
-### Rule learning (`rule_learning.py`)
+## Apps
+
+### Rule learning (`Apps/RuleLearning/rule_learning.py`)
+
+The first real app built on this Framework — originally a modified/improved version of the Two Images example above.
 
 Two geometric shapes are shown side by side on the **task screen** (primary monitor). The **background** signals which rule is currently active:
 
@@ -281,18 +304,20 @@ One row per regular trial (ER correction trials are not logged). Columns:
 
 A browser-based version of Rule Learning is available at:
 
-[https://vetmeduniviennamesserli.github.io/Touchscreen/](https://vetmeduniviennamesserli.github.io/Touchscreen/)
+[https://vetmeduniviennamesserli.github.io/Touchscreen/RuleLearning/](https://vetmeduniviennamesserli.github.io/Touchscreen/RuleLearning/)
 
-To enable it, go to **Settings → Pages** in the GitHub repository, set the source to **Deploy from a branch**, choose branch `main` and folder `/docs`, then click Save. The page will be live within a minute and redeploys automatically on every push to `main`.
+The bare site root (`https://vetmeduniviennamesserli.github.io/Touchscreen/`) is a landing page (`docs/index.html`) linking to each app that has a web version. Each app's web frontend lives at `docs/<AppName>/` — not every app needs one; it's a per-app decision. `docs/` must stay at the repo root for GitHub Pages to serve it.
+
+Deployment is handled by `.github/workflows/deploy-pages.yml` and only runs on a pushed `v*` tag or a published GitHub Release — **not** on ordinary commits to `main`. This requires the repo's **Settings → Pages → Build and deployment → Source** to be **GitHub Actions**, and the `github-pages` environment's deployment rules (**Settings → Environments → github-pages**) to allow tag `v*` (and not `main`, so a manual workflow run against `main` can't bypass the tag-only rule).
 
 The web version is designed for **human participants** and differs from the pigtouch version in several ways:
 
 - **ID code entry** — participants type an alphanumeric identifier code before the task starts. No subject-selection screen or manual counterbalancing controls.
-- **Automatic test-group & counterbalancing assignment** — on the first request for a given ID code, the participant is assigned a test group (`group1`/`group2`, alternated to keep the groups balanced) and one of the 64 counterbalance conditions in `TSparadigm_counterbalancing.xlsx` (cycled so every condition is used at least once per test group before repeating). Assignment is idempotent — reusing the same ID code always returns the same assignment. This is handled by a separate Apps Script (`docs/apps-script/assignment.gs`, deployment URL set in `ASSIGN_URL`); if that URL isn't configured or unreachable, the page falls back to a per-browser `localStorage` record instead (not shared across devices).
+- **Automatic test-group & counterbalancing assignment** — on the first request for a given ID code, the participant is assigned a test group (`group1`/`group2`, alternated to keep the groups balanced) and one of the 64 counterbalance conditions in `TSparadigm_counterbalancing.xlsx` (cycled so every condition is used at least once per test group before repeating). Assignment is idempotent — reusing the same ID code always returns the same assignment. This is handled by a separate Apps Script (`docs/RuleLearning/apps-script/assignment.gs`, deployment URL set in `ASSIGN_URL`); if that URL isn't configured or unreachable, the page falls back to a per-browser `localStorage` record instead (not shared across devices).
 - **Test group 2** — instead of learning a real second rule, group 2 gets two sessions where the second rule's background is rewarded semi-randomly (50/50 per stimulus pairing), and in the subsequent Alternate/Mixed sessions only needs to hit criterion on rule 1.
 - **No Pre-Training phase** — the experiment begins directly at Rule A (or B, per counterbalance).
 - **Session-end screens** — show score and a Continue/Repeat button only. No Exit or Download buttons.
 - **Session cap** — if the learning criterion isn't reached within 5 sessions of a phase, the experiment ends early with a link to the follow-up survey. Transfer phases always end after exactly 1 session regardless of criterion.
 - **Completion screen** — after all phases are done (or a phase's session cap is hit), participants see a completion message and a button linking to the follow-up survey.
-- **Automatic data upload** — the accumulated CSV is uploaded to Google Drive after every session end and again when the experiment completes. This means data is preserved even if a participant quits early. The upload URL is set in the `GDRIVE_URL` constant at the top of `docs/index.html`.
+- **Automatic data upload** — the accumulated CSV is uploaded to Google Drive after every session end and again when the experiment completes. This means data is preserved even if a participant quits early. The upload URL is set in the `GDRIVE_URL` constant at the top of `docs/RuleLearning/index.html`, and the Apps Script source behind it lives at `docs/RuleLearning/apps-script/upload.gs`.
 - Supports touch and keyboard (**A** = left, **D** = right). All trial logic (counterbalancing, trial ordering, criterion) matches the pigtouch version, except where test group 2 diverges as noted above.

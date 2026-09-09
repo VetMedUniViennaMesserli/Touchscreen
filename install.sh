@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
-# Touchscreen learning tool — installer / uninstaller
+# Touchscreen learning tool — first-time installer / uninstaller
+#
+# For updating an existing installation, use update.sh instead — this
+# script always re-prompts for which app to run, which update.sh does not.
+#
 # Usage:
 #   bash <(curl -sSL https://raw.githubusercontent.com/VetMedUniViennaMesserli/Touchscreen/main/install.sh)
 
@@ -15,6 +19,10 @@ step() { echo ""; echo "[+] $*"; }
 ok()   { echo "    ok"; }
 fail() { echo ""; echo "[!] $*" >&2; exit 1; }
 
+latest_tag() {
+    git -C "$INSTALL_DIR" tag -l 'v*' --sort=-v:refname | head -n1
+}
+
 echo ""
 echo "Touchscreen learning tool"
 echo "========================="
@@ -22,7 +30,7 @@ echo "========================="
 # ── action ────────────────────────────────────────────────────────────────────
 
 echo ""
-echo "  1) Install / Update"
+echo "  1) Install"
 echo "  2) Uninstall"
 echo ""
 read -rp "  Choose [1]: " action
@@ -53,51 +61,54 @@ if [ "$action" = "2" ]; then
     exit 0
 fi
 
-# ── checks (install / update only) ───────────────────────────────────────────
+# ── checks ────────────────────────────────────────────────────────────────────
 
 [[ "$OSTYPE" == linux* ]] || fail "This installer targets Linux only."
 
 command -v git     >/dev/null 2>&1 || fail "git not found.    Run: sudo apt-get install git"
 command -v python3 >/dev/null 2>&1 || fail "python3 not found. Run: sudo apt-get install python3"
 
-# ── clone / update ────────────────────────────────────────────────────────────
+# ── clone + pin to latest release tag ────────────────────────────────────────
 
 step "Repository"
 if [ -d "$INSTALL_DIR/.git" ]; then
-    echo "    Existing installation found — pulling latest changes"
-    git -C "$INSTALL_DIR" pull --ff-only
-else
-    echo "    Cloning into $INSTALL_DIR"
-    git clone "$REPO_URL" "$INSTALL_DIR"
+    fail "An installation already exists at $INSTALL_DIR — use update.sh to update it, or choose 'Uninstall' first."
 fi
+echo "    Cloning into $INSTALL_DIR"
+git clone --quiet "$REPO_URL" "$INSTALL_DIR"
+
+TAG="$(latest_tag)"
+[ -n "$TAG" ] || fail "No release tags (v*) found in the repository."
+git -C "$INSTALL_DIR" checkout --quiet "$TAG"
+echo "    Checked out release: $TAG"
 ok
 
 # ── app selection ─────────────────────────────────────────────────────────────
 
 CONFIG_FILE="$INSTALL_DIR/.selected_app"
 
-step "Select training app"
-echo "    Which training should run at startup?"
+step "Select app to run"
+echo "    Which app should run on this machine?"
 echo ""
-echo "    1) Two images            (touchscreen)"
-echo "    2) Two images            (keyboard)"
-echo "    3) Go / No-Go"
-echo "    4) Matching to sample"
-echo "    5) Random position"
-echo "    6) Sequential learning"
-echo "    7) Rule learning"
+
+mapfile -t APP_DIRS < <(find "$INSTALL_DIR/Apps" -mindepth 1 -maxdepth 1 -type d | sort)
+[ "${#APP_DIRS[@]}" -gt 0 ] || fail "No apps found under Apps/."
+
+for i in "${!APP_DIRS[@]}"; do
+    printf "    %d) %s\n" "$((i+1))" "$(basename "${APP_DIRS[$i]}")"
+done
 echo ""
-read -rp "    Enter number [7]: " choice
-choice="${choice:-7}"
-case "$choice" in
-    1) SELECTED="App/Trainings/two_images.py" ;;
-    2) SELECTED="App/Trainings/two_images_keyboard_input.py" ;;
-    3) SELECTED="App/Trainings/go_nogo.py" ;;
-    4) SELECTED="App/Trainings/matching_to_sample.py" ;;
-    5) SELECTED="App/Trainings/random_position.py" ;;
-    6) SELECTED="App/Trainings/sequential_learning.py" ;;
-    *) SELECTED="App/Trainings/rule_learning.py" ;;
-esac
+read -rp "    Enter number [1]: " choice
+choice="${choice:-1}"
+
+idx=$((choice-1))
+[ "$idx" -ge 0 ] && [ "$idx" -lt "${#APP_DIRS[@]}" ] || fail "Invalid choice: $choice"
+APP_DIR="${APP_DIRS[$idx]}"
+
+ENTRY="$(find "$APP_DIR" -maxdepth 1 -name '*.py' | sort | head -n1)"
+[ -n "$ENTRY" ] || fail "No .py entry point found in $APP_DIR"
+SELECTED="${ENTRY#"$INSTALL_DIR"/}"
+
 echo "$SELECTED" > "$CONFIG_FILE"
 echo "    Selected: $SELECTED"
 ok
@@ -134,9 +145,11 @@ echo ""
 echo "Done."
 echo ""
 echo "  Installed at : $INSTALL_DIR"
+echo "  Release      : $TAG"
 echo "  Service      : systemctl --user status $SERVICE"
 echo "  Logs         : $INSTALL_DIR/SessionLogs/"
 echo ""
-echo "  To change which training runs, edit:"
-echo "    $INSTALL_DIR/.selected_app"
+echo "  To update later, run update.sh from within $INSTALL_DIR (or re-fetch"
+echo "  it from GitHub) — it pulls the newest release tag without re-asking"
+echo "  which app to run."
 echo ""
