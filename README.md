@@ -103,6 +103,8 @@ Reference implementations under `Examples/`, not deployable apps — see the not
 - [Random position](Examples/RandomPosition/README.md) — touchscreen
 - [Sequential learning](Examples/SequentialLearning/README.md) — touchscreen
 
+**Turning an example into an app:** copy `Examples/<Name>/` to `Apps/<NewName>/` and edit the logic. That's it — being under `Apps/` is what makes `install.sh`, `build.sh`, and the release-build workflow treat it as a real app; assets and session-log naming already work relative to the folder, no config to update.
+
 ## Apps
 
 Real, deployable, versioned apps under `Apps/`:
