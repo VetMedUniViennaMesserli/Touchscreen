@@ -12,7 +12,12 @@ on:
   push:
     tags:
       - 'v*'
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'Existing tag to (re)build and attach binaries to (manual runs only)'
+        required: false
+        type: string
 
 permissions:
   contents: write
@@ -34,6 +39,8 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag_name || github.ref_name }}
 
       - uses: actions/setup-python@v5
         with:
@@ -85,5 +92,6 @@ jobs:
       - name: Attach binaries to the release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ inputs.tag_name || github.ref_name }}
           files: dist/*
           generate_release_notes: true
