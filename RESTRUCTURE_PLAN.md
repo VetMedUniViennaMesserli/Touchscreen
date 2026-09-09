@@ -1,7 +1,8 @@
 # Repo restructure plan: multi-app monorepo
 
-Status: **decisions made below — nothing implemented yet. Confirm with the
-rest of the team before starting.**
+Status: **implemented on branch `restructure-monorepo` — not yet merged to
+`main`.** Review and test before merging; field PCs are unaffected until
+then (they only ever pull tagged releases from `main`).
 
 ## Background
 
