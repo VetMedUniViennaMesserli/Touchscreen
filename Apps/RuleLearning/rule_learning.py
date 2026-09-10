@@ -19,7 +19,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspa
 from Framework.ShapeButton import ShapeButton
 from Framework.TrainingWindow import TrainingWindow
 from Framework.SessionConfig import SessionConfig
-from Framework.paths import get_app_root, get_log_root
+from Framework.paths import get_app_root, get_log_root, get_app_data_root
 
 from PySide6.QtWidgets import (QApplication, QDialog, QFormLayout, QFrame,
                                 QGroupBox, QGridLayout, QHBoxLayout, QLabel,
@@ -315,7 +315,7 @@ def build_phase(phase, n, tgt_shape, oth_shape, tgt_color, oth_color,
 # ---------------------------------------------------------------------------
 
 def _individuals_csv_path():
-    return os.path.join(get_log_root(), 'individuals.csv')
+    return os.path.join(get_app_data_root(), 'individuals.csv')
 
 
 def generate_individuals_csv():

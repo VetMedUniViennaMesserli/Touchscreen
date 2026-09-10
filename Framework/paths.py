@@ -31,6 +31,22 @@ def get_app_name() -> str:
         return os.path.basename(os.path.dirname(os.path.abspath(main.__file__)))
     return 'UnknownApp'
 
+def get_app_data_root() -> str:
+    """Return a persistent, per-app directory for data that must survive
+    across runs (e.g. individuals.csv) — unlike get_app_root(), which in
+    frozen mode is a temp extraction dir wiped after every run.
+
+    Frozen binary: a subfolder named after the executable, next to it
+    (e.g. dist/RuleLearning/), so multiple built apps sharing one dist/
+    folder don't collide.
+    Normal run: the app's own folder — same as get_app_root() in this
+    mode, which is already per-app and persistent (it's the real file in
+    the working tree, not a temp copy).
+    """
+    if getattr(sys, 'frozen', False):
+        return os.path.join(os.path.dirname(sys.executable), get_app_name())
+    return get_app_root()
+
 def get_log_root() -> str:
     """Return the directory where SessionLogs/ should be created.
 

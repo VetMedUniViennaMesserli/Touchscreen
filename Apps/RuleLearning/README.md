@@ -89,7 +89,7 @@ Rule learning opens a full-screen setup dialog on the secondary monitor before e
 
 ## individuals.csv
 
-On first launch, `individuals.csv` is created automatically next to the binary (or at the repo root when running via `touchscreen.sh`) with 10 pre-configured individuals and balanced counterbalancing. Scientists can open this file in any spreadsheet application to rename individuals, adjust counterbalancing, or add rows.
+On first launch, `individuals.csv` is created automatically in this app's own folder (`Apps/RuleLearning/individuals.csv` when running from source, or next to a built binary) with 10 pre-configured individuals and balanced counterbalancing. It's per-app, not shared — a different app's own individuals/subjects config, if it needs one, lives in its own folder the same way. Scientists can open this file in any spreadsheet application to rename individuals, adjust counterbalancing, or add rows.
 
 ```
 individual_id, first_rule, bg_rule_a, target_stim, transfer_stim, notes
