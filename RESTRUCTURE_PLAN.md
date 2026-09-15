@@ -1,8 +1,8 @@
 # Repo restructure plan: multi-app monorepo
 
-Status: **implemented on branch `restructure-monorepo` — not yet merged to
-`main`.** Review and test before merging; field PCs are unaffected until
-then (they only ever pull tagged releases from `main`).
+Status: **implemented and merged to `main`** (2026-09-09, first shipped in
+release `v8.0`/`v9.0`). Kept here as the design rationale behind the
+current layout — see `README.md` for how things actually work day to day.
 
 ## Background
 
