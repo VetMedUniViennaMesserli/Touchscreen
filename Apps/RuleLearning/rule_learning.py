@@ -107,8 +107,8 @@ def _placeOnScreen(widget, screen=None):
     resize such windows relative to their own panels/docks instead of honouring
     the requested geometry, leaving the dialog off-centre with desktop bars
     showing through. Binding the QWindow to the target screen before calling
-    showFullScreen() (the same approach the main task window already uses)
-    avoids that.
+    showFullScreen() avoids that — used for the setup dialog, session-end
+    dialog, and the main task window alike.
     """
     screen = screen or QApplication.primaryScreen()
     widget.create()
@@ -448,7 +448,7 @@ class _NumberStepper(QWidget):
 # ---------------------------------------------------------------------------
 
 class RuleLearningSetupDialog(QDialog):
-    """Full-screen two-page touchscreen setup dialog, shown on secondary screen."""
+    """Full-screen two-page touchscreen setup dialog, shown on the primary (control) screen."""
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -466,7 +466,7 @@ class RuleLearningSetupDialog(QDialog):
         root.setContentsMargins(0, 0, 0, 0)
         root.addWidget(self._stack)
 
-        _placeOnScreen(self, _secondary_screen())
+        _placeOnScreen(self)
 
     # ── Page 0: individual grid ────────────────────────────────────────────
 
@@ -685,7 +685,7 @@ class _SessionEndDialog(QDialog):
 
         vbox.addLayout(btn_row)
 
-        _placeOnScreen(self, _secondary_screen())
+        _placeOnScreen(self)
 
     def _onExit(self):
         self._exit_requested = True
@@ -1232,7 +1232,7 @@ def startApp():
     w = createTouchscreenWindow()
     if w is None:
         sys.exit(0)
-    w.showFullScreen()
+    _placeOnScreen(w, _secondary_screen())
     sys.exit(app.exec())
 
 

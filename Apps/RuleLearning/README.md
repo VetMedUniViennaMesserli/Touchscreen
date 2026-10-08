@@ -2,14 +2,14 @@
 
 The first real app built on this Framework — originally a modified/improved version of the Two Images example (see `Examples/TwoImages/`).
 
-Two geometric shapes are shown side by side on the **task screen** (primary monitor). The **background** signals which rule is currently active:
+Two geometric shapes are shown side by side on the **task screen**. The **background** signals which rule is currently active:
 
 | Background | Rule | Correct stimulus |
 |---|---|---|
 | Light grey | Rule A | Stimulus with the **target colour** |
 | Diagonal grey stripes | Rule B | Stimulus with the **target shape** |
 
-The setup dialog and session-end screen are always shown on the **secondary monitor** (if connected), so the subject cannot interact with control options. If only one monitor is present, everything appears on the same screen. (Both dialogs are explicitly bound to their target screen and shown full-screen, so the window manager can't misplace them or leave desktop panels/bars visible underneath.)
+The **primary monitor is the control screen**: the setup dialog (individual selection) and the session-end screen always appear there, where the scientist operates them. If a **second monitor is connected**, the task screen (what the subject sees) runs on that one instead, keeping it separate from the control screen; with only one monitor, everything appears on it. (All three windows are explicitly bound to their target screen and shown full-screen, so the window manager can't misplace them or leave desktop panels/bars visible underneath.)
 
 Input: touchscreen or keyboard (**A** = left, **D** = right).
 
@@ -66,7 +66,7 @@ All 12 trials per session show only a white cross on a black background, visible
 
 ## Session-end screen
 
-After every session a results screen is shown on the secondary monitor displaying the score, whether the criterion was met, and what happens next. Two buttons are available:
+After every session a results screen is shown on the primary (control) monitor displaying the score, whether the criterion was met, and what happens next. Two buttons are available:
 
 - **Continue / Repeat** — proceeds to the next session or phase.
 - **Exit** — ends the experiment and returns to the start menu.
@@ -75,7 +75,7 @@ After every session a results screen is shown on the secondary monitor displayin
 
 ## Setup dialog
 
-Rule learning opens a full-screen setup dialog on the secondary monitor before each run. Scientists select an individual from the grid and can review or adjust parameters:
+Rule learning opens a full-screen setup dialog on the primary (control) monitor before each run. Scientists select an individual from the grid and can review or adjust parameters:
 
 - **Individual** — select from the individual list
 - **First rule** — which rule is trained first (RuleA or RuleB)
