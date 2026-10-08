@@ -43,6 +43,10 @@ REQS_CHANGED=1
 if git -C "$SCRIPT_DIR" diff --quiet "$CURRENT" "$LATEST" -- requirements.txt 2>/dev/null; then
     REQS_CHANGED=0
 fi
+SERVICE_CHANGED=1
+if git -C "$SCRIPT_DIR" diff --quiet "$CURRENT" "$LATEST" -- touchscreen.service 2>/dev/null; then
+    SERVICE_CHANGED=0
+fi
 git -C "$SCRIPT_DIR" checkout --quiet "$LATEST"
 ok
 
@@ -50,6 +54,13 @@ if [ "$REQS_CHANGED" = "1" ]; then
     step "requirements.txt changed — reinstalling dependencies"
     "$SCRIPT_DIR/venv/bin/pip" install --upgrade pip -q
     "$SCRIPT_DIR/venv/bin/pip" install -r "$SCRIPT_DIR/requirements.txt" -q
+    ok
+fi
+
+if [ "$SERVICE_CHANGED" = "1" ]; then
+    step "touchscreen.service changed — reinstalling the systemd unit"
+    cp "$SCRIPT_DIR/touchscreen.service" "$HOME/.config/systemd/user/"
+    systemctl --user daemon-reload
     ok
 fi
 
