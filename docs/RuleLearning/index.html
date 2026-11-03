@@ -674,8 +674,8 @@ function uploadToGDrive(csvLog) {
 // ─── Test group / counterbalance assignment ───────────────────────
 //
 // Each of the 64 COUNTERBALANCING conditions should be used at least once
-// per test group before repeating, and group1/group2 should be assigned in
-// roughly alternating fashion across participants. Both require state that
+// per test group before repeating. (group1/group2 used to alternate; for now
+// every participant is assigned to group2.) This requires state that
 // persists across separate browser sessions/devices, so the preferred path
 // is a small server-side assignment tracker (see docs/apps-script/
 // assignment.gs). If ASSIGN_URL isn't set (or the request fails), we fall
@@ -693,11 +693,11 @@ async function requestAssignment(idCode) {
   } catch (e) { return null; }
 }
 
+// Currently only group2 is being run, so every participant goes there.
 function pickLocalTestGroup() {
-  const g1 = Number(localStorage.getItem('groupCount_group1') || 0);
-  const g2 = Number(localStorage.getItem('groupCount_group2') || 0);
-  const group = g1 <= g2 ? 'group1' : 'group2';
-  localStorage.setItem(`groupCount_${group}`, String((group==='group1' ? g1 : g2) + 1));
+  const group = 'group2';
+  const n = Number(localStorage.getItem(`groupCount_${group}`) || 0);
+  localStorage.setItem(`groupCount_${group}`, String(n + 1));
   return group;
 }
 
