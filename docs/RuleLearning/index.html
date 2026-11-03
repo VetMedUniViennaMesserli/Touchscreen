@@ -530,11 +530,17 @@ function buildRuleB(n, tS, oS, tC, oC) {
 // Randomly-rewarded variants used for test group 2's second rule: same trial
 // layouts as buildRuleA/buildRuleB, but the rewarded stimulus for each
 // pairing-type is chosen 50/50 at random instead of being fixed by the rule.
+// Flips are split evenly between left- and right-rewarded trials, so in a
+// 24-trial session each icon is rewarded exactly 3 times on each side.
 function _randomizeReward(pool, pairKeys) {
   for (const key of pairKeys) {
     const idxs = pool.map((t,i)=>({t,i})).filter(x=>x.t._pairKey===key).map(x=>x.i);
-    shuffle(idxs);
-    idxs.slice(0, Math.floor(idxs.length/2)).forEach(i => {
+    const half = Math.floor(idxs.length/2);
+    let nL = Math.floor(half/2), nR = nL;
+    if (half % 2) { if (Math.random() < 0.5) nL++; else nR++; }
+    const left  = shuffle(idxs.filter(i => pool[i].correctSide==='left'));
+    const right = shuffle(idxs.filter(i => pool[i].correctSide==='right'));
+    [...left.slice(0, nL), ...right.slice(0, nR)].forEach(i => {
       pool[i].correctSide = pool[i].correctSide==='left' ? 'right' : 'left';
     });
   }
@@ -992,13 +998,14 @@ function evaluateSession() {
   }
 
   // Criterion: 10 out of 12 trials per trial type (scales with nTrials).
-  // Group 2 in Alternate/Mixed sessions is only held to criterion on rule 1
-  // (their "rule 2" trials are randomly rewarded and have no learnable answer).
+  // Group 2 in Alternate/Mixed sessions is only held to criterion on rule 1:
+  // 10 out of 12 rule-1 trials overall, regardless of trial type (their
+  // "rule 2" trials are randomly rewarded and have no learnable answer).
   let met;
   if (_s.testGroup === 'group2' && (phase === 'Alternate' || phase === 'Mixed')) {
-    const ruleCrit = Math.round(_s.nTrials / 4 * 10 / 12);
+    const ruleCrit = Math.round(_s.nTrials / 2 * 10 / 12);
     const s = _scoreByRule[_s.firstRule];
-    met = s[1] >= ruleCrit && s[2] >= ruleCrit;
+    met = s[1] + s[2] >= ruleCrit;
   } else {
     const crit = Math.round(_s.nTrials / 2 * 10 / 12);
     met = _correctT1 >= crit && _correctT2 >= crit;
