@@ -1017,7 +1017,7 @@ function evaluateSession() {
     const next = _s.phases[_phaseIdx] ?? null;
     if (!next) { completeExperiment('done'); return; }
     finishSessionScreen(
-      `Score: ${_correctT1+_correctT2} / ${_s.nTrials}\n\n${met?'Criterion reached!':'Session complete.'}\n\nNext: ${next}`,
+      `Score: ${_correctT1+_correctT2} / ${_s.nTrials}\n\n${met?'Criterion reached!':'Session complete.'}`,
       'Continue');
     return;
   }
